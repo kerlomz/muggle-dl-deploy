@@ -1,0 +1,26 @@
+FROM ubuntu:20.04
+
+RUN apt-get update -y
+RUN apt-get install wget -y
+RUN wget -O /etc/apt/sources.list http://mirrors.cloud.tencent.com/repo/ubuntu20_sources.list
+RUN apt-get clean all -y \
+    && apt-get update -y  \
+    && apt install software-properties-common -y  \
+    && add-apt-repository ppa:deadsnakes/ppa -y  \
+    && apt update -y \
+    && apt install git -y \
+    && apt install python3.9 -y \
+    && apt install python3.9-dev -y \
+    && apt install python3-pip -y \
+    && apt-get install ccache -y \
+    && apt-get install patchelf -y \
+    && apt install chrpath
+
+ADD . /app/
+WORKDIR app
+
+RUN python3.9 -m pip install git+git://github.com/benoitc/gunicorn.git --no-cache-dir --force-reinstall
+RUN python3.9 -m pip install -r requirements.txt -i https://mirrors.cloud.tencent.com/pypi/simple
+ENTRYPOINT ["python3.9", "main.py", "--port", "19199"]
+EXPOSE 19199:19199
+

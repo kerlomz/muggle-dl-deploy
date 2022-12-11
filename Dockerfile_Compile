@@ -1,0 +1,61 @@
+FROM centos:7.6.1810
+
+ADD ./muggle /app/muggle
+ADD ./test_server.py /app/test_server.py
+ADD ./stardust /app/stardust
+ADD ./ext /app/ext
+ADD ./logic /app/logic
+WORKDIR app
+#RUN mv /app/muggle/package/lib/CentOS7-Base-163.repo /etc/yum.repos.d/CentOS-Base.repo
+RUN mv /app/muggle/package/lib/CentOS7-Base-Ali.repo /etc/yum.repos.d/CentOS-Base.repo
+RUN yum -y update
+RUN yum install wget -y
+RUN yum clean all && yum makecache
+RUN yum -y update
+
+
+RUN yum install gcc gcc-c++ kernel-devel automake autoconf libtool make openssl-devel bzip2-devel libffi-devel zlib-devel git libjpeg-turbo-devel -y && \
+    yum install centos-release-scl -y && yum install devtoolset-8-gcc devtoolset-8-gcc-c++ devtoolset-11-gcc* fuse-libs fuse fuse-devel clang file initscripts -y
+
+RUN yum install epel-release -y && yum --enablerepo=epel -y install fuse-sshfs ccache
+
+#RUN cd muggle/package/lib/ && wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz && tar -xvf Python-3.9.9.tgz && mv Setup Python-3.9.9/Modules/ -f
+
+RUN cd muggle/package/lib/ && tar -xvf Python-3.9.9.tar.gz
+WORKDIR /app/muggle/package/lib/Python-3.9.9
+RUN ./configure --enable-optimizations --enable-shared && make altinstall
+WORKDIR /app
+RUN echo "/usr/local/lib" >> /etc/ld.so.conf && echo "/usr/local/lib64" >> /etc/ld.so.conf && ldconfig -v
+
+#RUN python3.9 -m pip install git+git://github.com/benoitc/gunicorn.git --no-cache-dir --force-reinstall && \
+RUN python3.9 -m pip install muggle/package/lib/gunicorn-master.zip && \
+    cd muggle/ && python3.9 -m pip install -r requirements.txt -i https://mirrors.cloud.tencent.com/pypi/simple
+#RUN cd muggle/ && python3.9 -m pip install -r requirements.txt -i https://mirrors.cloud.tencent.com/pypi/simple
+
+RUN mv /app/muggle/package/lib/cv/cv2.cpython-39-x86_64-linux-gnu.so /usr/local/lib/python3.9/site-packages/cv2/ && \
+    mv /app/muggle/package/lib/cv/__init__.py /usr/local/lib/python3.9/site-packages/cv2/ && \
+    mv /app/muggle/package/lib/cv/lib.tar.gz /usr/local/lib64/ && cd /usr/local/lib64/ && tar -xvf lib.tar.gz && \
+    mv /app/muggle/package/lib/patchelf-0.14.3-x86_64.tar.gz /usr/ && cd /usr/ && tar -xvf patchelf-0.14.3-x86_64.tar.gz && \
+    mkdir -p ~/.local/share/Nuitka/appimagetool-x86_64.AppImage/x86_64/13 && \
+    mv /app/muggle/package/lib/appimagetool-x86_64.AppImage ~/.local/share/Nuitka/appimagetool-x86_64.AppImage/x86_64/13/
+
+RUN yum install gtk2 -y && yum provides */libgtk-x11-2.0.so* -y
+
+RUN cd /usr/lib64 && ls
+RUN echo "/usr/lib64" >> /etc/ld.so.conf && ldconfig -v
+WORKDIR /app/muggle/package
+ENV PYTHONIOENCODING="UTF-8"
+WORKDIR /app/
+#ENV PYTHONPATH="/app/"
+
+#RUN modprobe fuse
+#RUN python3.9 runner.py
+#WORKDIR /app/
+#RUN cd /tmp/muggle_dist && ls && tar -cvzf main.dist.tar.gz main.dist/
+
+##WORKDIR /app/dist/
+##ENTRYPOINT ["cd", "*/main.dist", "&&", "./main", "--port", "19199"]
+#WORKDIR /app/
+#ENTRYPOINT ["python3.9", "test_server.py"]
+##EXPOSE 19199:19199
+
