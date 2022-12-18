@@ -105,6 +105,8 @@ class ProjectEntities:
         if not os.path.exists(base_projects_dir):
             return all_models
         for project_name in os.listdir(base_projects_dir):
+            if not os.path.isdir(Path.join(base_projects_dir, project_name)):
+                continue
             try:
                 project_path = Path.project_path(project_name)
                 # print(project_path)

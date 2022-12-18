@@ -86,7 +86,7 @@ class MemoryLoader:
     @classmethod
     def get_logics_map(cls, logic_dir):
         logic_maps = {}
-        logic_dir = Path.filter(logic_dir)
+        logic_dir = Path.filter(logic_dir[logic_dir.find("projects"):])
         package = logic_dir.replace("./", "").replace("/", ".")
         modules_maps = {
             _.split(".")[0]: Path.join(logic_dir, _)
@@ -107,9 +107,9 @@ class MemoryLoader:
 
     @classmethod
     def export_project(cls, base_crypto, project_entity, root_dir=".", aging=None, dynamic_key=False):
-        deadline = (time.time() + aging) if aging else None
+        deadline = (time.time() + aging) if aging and aging != -1 else None
         project_name = project_entity.project_name
-        logger.info(f"正在导出项目 [{project_name}], 时效 [{aging if aging else '不限'}]")
+        logger.info(f"正在导出项目 [{project_name}], 时效 [{aging if aging and aging != -1 else '不限'}]")
         packages = OrderedDict()
         packages[f"projects/{project_name}/ext_params"] = json.dumps({"deadline": deadline}).encode("utf8")
         for key, model_name in project_entity.models.items():
@@ -177,8 +177,15 @@ class MemoryLoader:
         compile_dir = Path.join(root_dir, "compile_projects")
         if not os.path.exists(compile_dir):
             os.makedirs(compile_dir)
-
         open(Path.join(compile_dir, f"{project_name}.crypto"), "wb").write(prefix+encrypted_files)
+
+    def iters_crypto_projects(self):
+        for project_file in os.listdir("compile_projects"):
+            if not project_file.endswith(".crypto"):
+                continue
+            project_bytes = open(Path.join("compile_projects", project_file), "rb").read()
+            project_name, timer, fs = self.load_project(project_bytes)
+        self.reset_layouts(fs)
 
     @classmethod
     def export_projects(cls, need_projects, root_dir=".", aging=None):
@@ -241,9 +248,17 @@ class MemoryLoader:
                 except Exception as e:
                     raise RuntimeError(f"[Logic] 加载失败 {e}")
 
-            if filepath.startswith(f".cached_examples/{project_name}/image"):
+            demo_image_dir = f".cached_examples/{project_name}/image"
+            demo_title_dir = f".cached_examples/{project_name}/title"
+            if filepath.startswith(demo_image_dir):
+                if not os.path.exists(demo_image_dir):
+                    os.makedirs(demo_image_dir)
+                open(filepath, "wb").write(_open(filepath, "rb").read())
                 project_cfg['input_images'].append(filepath)
-            if filepath.startswith(f".cached_examples/{project_name}/title"):
+            if filepath.startswith(demo_title_dir):
+                if not os.path.exists(demo_title_dir):
+                    os.makedirs(demo_title_dir)
+                open(filepath, "wb").write(_open(filepath, "rb").read())
                 filename = os.path.basename(filepath)
                 idx = int(filename.split(".")[0].split("_")[1]) if filename.startswith("title_") else 0
                 self.model_manager.project_entities.iter_image_titles(

@@ -3,6 +3,7 @@
 import re
 import PIL.Image
 from muggle.entity import BoundingBox
+from difflib import SequenceMatcher
 
 
 class LogicAuxiliary:
@@ -105,3 +106,9 @@ class LogicAuxiliary:
             corp_arr = [pos_range[0][0], pos_range[1][0], pos_range[0][1], pos_range[1][1]]
             group.append(corp_arr)
         return group
+
+    @classmethod
+    def pick_from_list(cls, text, src):
+        scores = [SequenceMatcher(None, text, _).ratio() for _ in src]
+        max_index = max(enumerate(scores), key=lambda x: x[1])[0]
+        return src[max_index]

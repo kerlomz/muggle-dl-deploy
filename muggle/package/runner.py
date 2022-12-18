@@ -3,6 +3,7 @@
 import os
 import sys
 import yaml
+import altair
 import pandas
 import shutil
 import anyio
@@ -118,7 +119,7 @@ def compile_projects(**kwargs):
     copy_projects(cli_args.projects, src_dir="./", trt_dir=build_path)
     encrypt_models(model_paths, root_dir=build_path)
 
-    if aging := kwargs.get('aging'):
+    if aging := cli_args.aging:
         compile_aging_projects(cli_args.projects, root_dir=build_path, aging=aging)
     src_compile_aging_project_dir = path_join(build_path, "compile_projects")
     trt_compile_aging_project_dir = path_join(dist_path, "compile_projects")
@@ -267,6 +268,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         f'--include-data-dir={os.path.dirname(starlette.__file__)}=starlette/',
         f'--include-data-dir={os.path.dirname(gradio.__file__)}=gradio/',
         f'--include-data-dir={os.path.dirname(websockets.__file__)}=websockets/',
+        f'--include-data-dir={os.path.dirname(altair.__file__)}=altair/',
         cuda_libs_cmd if cuda_libs_exists else "",
         # f'--include-data-dir={os.path.join(os.path.dirname(gradio.__file__), "templates")}=gradio/templates',
         f'--include-data-file={crypto_argv}',

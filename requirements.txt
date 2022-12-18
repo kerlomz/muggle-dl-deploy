@@ -34,3 +34,4 @@ jinja2
 markupsafe
 nuitka
 psutil
+altair

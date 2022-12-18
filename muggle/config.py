@@ -19,7 +19,7 @@ STARTUP_PARAM = {
     "threads": CPU_COUNT,
     "port": 19199,
     "host": "0.0.0.0",
-    "enabled_module": ['Draw', 'Docs'],
+    "enabled_module": ['Draw', 'Docs', 'MemoryLoader'],
     "invoke_route": "/runtime/text/invoke",
     "secret_key": "@",
     "title": "muggle-deploy",

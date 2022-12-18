@@ -250,6 +250,7 @@ if 'MemoryLoader' in modules_enabled:
         interface=interface
     )
     memory_loader = Import.get_class('MemoryLoader')
+    memory_loader.iters_crypto_projects()
     # interface.app.add_api_route("/runtime/import/project", memory_loader.logic_route, methods=["POST"])
 
 if cli_args.warm_up:

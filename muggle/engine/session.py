@@ -15,7 +15,7 @@ from muggle.config import cli_args
 
 project_entities: ProjectEntities = ProjectEntities()
 model_manager = ModelManager(project_entities)
-if not project_entities.all:
+if not project_entities.all and not os.path.exists("compile_projects"):
     logger.info(f"当前尚未发现任何工程, 请将项目相关文件 [*projects|*logic] 置于根目录")
 if loaded_project_names := '|'.join(project_entities.all.keys()):
     # model_manager.warm_up_task(getattr(globals()['BaseEngine'], 'utils_cls'))
@@ -52,4 +52,14 @@ class ProjectSession:
     @property
     def default_engine(self) -> ModelEngineType:
         return [_ for _ in self.engine.values()][0]
+
+    @classmethod
+    def engine_from_project(cls, project_name, model_name=None):
+        project_entity = project_entities.get(project_name)
+        engines = OrderedDict({
+            v.get('model_name'): model_manager.from_project(**v).get_engine(globals(), project_entity)
+            for k, v in project_entities.get(project_name).model_params.items()
+        })
+        return engines.get(model_name) if model_name else engines
+
 

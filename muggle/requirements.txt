@@ -34,3 +34,4 @@ uvicorn
 pytz
 jinja2
 psutil
+altair

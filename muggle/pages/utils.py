@@ -96,6 +96,7 @@ class BlocksFuse:
         blocks = self.merge()
         self.app.configure_app(blocks)
         self.blocks = blocks
+        self.setting_routes()
 
     def get_config(self, name):
         config = self.config_maps.get(name).copy()
@@ -134,7 +135,6 @@ class BlocksFuse:
         for name, layout in self.layouts_maps.items():
             uri_rels.add("/".join(layout.uri.split("/")[:-1]))
             self.app.add_api_route(layout.uri, layout.render_fn(self), methods=['GET'])
-
         for uri in uri_rels:
             for r in self.resource_route:
                 self.app.add_api_route(f"{uri}{r[0]}", r[1], methods=r[2])
