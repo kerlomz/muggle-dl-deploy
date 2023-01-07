@@ -112,3 +112,13 @@ class LogicAuxiliary:
         scores = [SequenceMatcher(None, text, _).ratio() for _ in src]
         max_index = max(enumerate(scores), key=lambda x: x[1])[0]
         return src[max_index]
+
+    @classmethod
+    def fill_bg(cls, image: PIL.Image.Image):
+        bg = PIL.Image.new("RGBA", image.size, (255, 255, 255, 255))
+        try:
+            bg.paste(image, (0, 0), image)
+        except ValueError as e:
+            if 'bad transparency mask' in e.args:
+                return image.convert("RGB")
+        return bg.convert("RGB")

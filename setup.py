@@ -52,9 +52,9 @@ data_files = [
 install_requires = [
     'scikit-build', 'certifi', 'pyyaml', 'psutil',
     'requests', 'tinyaes', 'certifi', 'requests',
-    'paramiko', 'six', 'zstandard', 'nuitka', 'loguru', 'jinja2',
+    'paramiko', 'six', 'zstandard', 'nuitka', 'loguru', 'jinja2', 'altair',
     'pyyaml', 'pycryptodome', 'easycython', 'pyOpenSSL', 'cryptography', 'pydantic',
-    'fastapi', 'uvicorn', 'gradio==3.12.0', 'httpcore==0.15', 'markupsafe', 'numpy', 'Pillow', 'opencv-python-headless',
+    'fastapi', 'uvicorn', 'gradio==3.12', 'httpcore==0.15', 'markupsafe', 'numpy', 'Pillow', 'opencv-python-headless',
 ]
 
 dependency_links = []

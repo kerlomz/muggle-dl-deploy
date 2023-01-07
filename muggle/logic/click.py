@@ -13,6 +13,7 @@ from abc import ABC
 from muggle.logic.base import BaseLogic, Response, Title
 from muggle.entity import Blocks, Block, BoundingBox, InputImage, ImageType
 from muggle.utils import Core
+from muggle.logic.utils import LogicAuxiliary
 from muggle.config import cli_args
 
 
@@ -87,13 +88,13 @@ class BaseClickLogic(BaseLogic, ABC):
     @classmethod
     def parse_title(cls, title):
         if isinstance(title, str) and title.startswith("data:image"):
-            title = Core.fill_bg(Core.text2image(title).pil)
+            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
         elif isinstance(title, str) and len(title) > 100:
-            title = Core.fill_bg(Core.text2image(title).pil)
+            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
         elif isinstance(title, str) and title.startswith("["):
-            title = [Core.fill_bg(Core.text2image(_).pil) for _ in json.loads(title)]
+            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil) for _ in json.loads(title)]
         elif isinstance(title, list) and len(title) > 0 and isinstance(title[0], str) and len(title[0]) > 100:
-            title = [Core.fill_bg(Core.text2image(_).pil) for _ in title]
+            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil) for _ in title]
         return title
 
     @classmethod
@@ -559,6 +560,6 @@ class ClickSliderLogic(BaseClickLogic):
         return blocks
 
     def dumps(self, response: Response) -> tuple[str, float]:
-        coordinates = response.dumps_coordinates()
-        result_text = "|".join([",".join(str(j) for j in i) for i in coordinates])
+        coordinates = response.dump_bounding_box()
+        result_text = coordinates[0][0]
         return result_text, response.score

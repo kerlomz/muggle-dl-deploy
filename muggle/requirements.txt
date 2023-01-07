@@ -26,7 +26,7 @@ ordered-set
 waitress
 easycython
 cffi
-gradio
+gradio==3.12
 markdown
 fastapi
 matplotlib

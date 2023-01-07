@@ -72,8 +72,7 @@ class Examples(gr.examples.Examples):
             self.dataset.click(
                 load_example,
                 inputs=[self.dataset],
-                outputs=self.inputs_with_examples
-                        + (self.outputs if self.cache_examples else []),
+                outputs=self.inputs_with_examples + (self.outputs if self.cache_examples else []),
                 postprocess=False,
                 queue=False,
             )
