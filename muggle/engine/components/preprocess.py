@@ -86,6 +86,8 @@ class ProcessUtils:
         to_rgb = self.model_cfg.get("to_rgb", False)
         input_shape = self.runtime_engine.input_shape if input_shape is None else input_shape
         im = input_image.resize(input_shape[2:][::-1], resample=PIL.Image.BILINEAR)
+        if im.mode == 'P' and not to_rgb and input_shape[1] == 3:
+            im = im.convert("RGB")
         im = np.asarray(im)
         shape = im.shape
         if len(shape) > 2 and shape[2] == 4:
@@ -95,8 +97,11 @@ class ProcessUtils:
             g[mask] = 255
             r[mask] = 255
             im = cv2.merge((b, g, r))
-        if to_rgb:
+        if to_rgb and len(shape) > 2:
             im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+        elif to_rgb and len(shape) == 2:
+            im = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
+        shape = im.shape
         if input_shape[1] == 1 and len(shape) == 3:
             im = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
             im = im[:, :] / 255.

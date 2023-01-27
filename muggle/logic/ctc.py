@@ -47,9 +47,12 @@ class GIFAllFramesCTCLogic(BaseCTCLogic):
         for idx in range(len(need_items)):
 
             for items in concat_items:
-                if items[idx][1] > need_items[idx][1]:
-                    need_items[idx][1] = items[idx][1]
-                    need_items[idx][0] = items[idx][0]
+                try:
+                    if items[idx][1] > need_items[idx][1]:
+                        need_items[idx][1] = items[idx][1]
+                        need_items[idx][0] = items[idx][0]
+                except:
+                    continue
         return need_items
 
 

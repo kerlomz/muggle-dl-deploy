@@ -4,7 +4,7 @@ certifi
 onnxruntime
 numpy
 Pillow==8.4.0
-opencv-python-headless
+opencv-python-headless==4.6.0.66
 pyyaml
 requests
 tinyaes
@@ -13,7 +13,7 @@ requests
 werkzeug
 paramiko
 six
-nuitka
+nuitka==1.2.7
 zstandard
 pyyaml
 easycython

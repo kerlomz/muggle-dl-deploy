@@ -114,18 +114,24 @@ def compile_projects(**kwargs):
         compile_runtime(onefile=cli_args.onefile, compile_sdk=cli_args.compile_sdk)
 
     os.chdir(cur_dir)
+    if cli_args.projects:
+        model_paths = get_models(cli_args.projects)
+        copy_projects(cli_args.projects, src_dir="./", trt_dir=build_path)
+        encrypt_models(model_paths, root_dir=build_path)
 
-    model_paths = get_models(cli_args.projects)
-    copy_projects(cli_args.projects, src_dir="./", trt_dir=build_path)
-    encrypt_models(model_paths, root_dir=build_path)
-
-    if aging := cli_args.aging:
-        compile_aging_projects(cli_args.projects, root_dir=build_path, aging=aging)
-    src_compile_aging_project_dir = path_join(build_path, "compile_projects")
-    trt_compile_aging_project_dir = path_join(dist_path, "compile_projects")
-    if os.path.exists(src_compile_aging_project_dir):
-        shutil.copytree(src_compile_aging_project_dir, trt_compile_aging_project_dir)
-    copy_projects(cli_args.projects, src_dir=build_path, trt_dir=dist_path)
+        if aging := cli_args.aging:
+            compile_aging_projects(cli_args.projects, root_dir=build_path, aging=aging)
+        src_compile_aging_project_dir = path_join(build_path, "compile_projects")
+        trt_compile_aging_project_dir = path_join(dist_path, "compile_projects")
+        if os.path.exists(src_compile_aging_project_dir):
+            try:
+                shutil.rmtree(trt_compile_aging_project_dir)
+            except:
+                pass
+            if not os.path.exists(trt_compile_aging_project_dir):
+                os.makedirs(trt_compile_aging_project_dir)
+            shutil.copytree(src_compile_aging_project_dir, trt_compile_aging_project_dir, dirs_exist_ok=True)
+        copy_projects(cli_args.projects, src_dir=build_path, trt_dir=dist_path)
     logger.info(f"编译路径 = {dist_path}")
 
 
@@ -201,6 +207,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=muggle.pages.components.base',
         '--include-package=muggle.pages.components.displays',
         '--include-package=muggle.pages.components.inputs',
+        '--include-package=muggle.pages.components.examples',
         '--include-package=muggle.middleware',
         '--include-package=muggle.categories',
         '--include-package=muggle.entity',

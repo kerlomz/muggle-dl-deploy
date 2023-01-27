@@ -82,16 +82,6 @@ class Core:
         return image
 
     @classmethod
-    def fill_bg(cls, image: PIL.Image.Image):
-        bg = PIL.Image.new("RGBA", image.size, (255, 255, 255, 255))
-        try:
-            bg.paste(image, (0, 0), image)
-        except ValueError as e:
-            if 'bad transparency mask' in e.args:
-                return image.convert("RGB")
-        return bg.convert("RGB")
-
-    @classmethod
     def bytes2image(cls, source: Optional[bytes]) -> Optional[PIL.Image.Image]:
         if not source:
             return

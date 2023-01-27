@@ -114,7 +114,13 @@ class Draw:
 
         result = handler.process(APIType.IMAGE, project_name, body, None, input_image, title, remote_ip=remote_ip)
         preview_im = Core.bytes2image(result.image) if result.image else None
-        return str(result.data), preview_im
+        if project_entity.outputs == 'text':
+            preview_text = str(result.data)
+        elif project_entity.outputs == 'image':
+            preview_text = ''
+        else:
+            preview_text = ''
+        return preview_text, preview_im
 
     class Template:
 

@@ -93,6 +93,7 @@ class MemoryLoader:
             for _ in (os.listdir(logic_dir) if os.path.exists(logic_dir) else []) if not _.startswith("__")
         }
         for module_name, path in modules_maps.items():
+            print(f"{package}.{module_name}")
             module = importlib.import_module(f"{package}.{module_name}")
             logic_maps.update({k: path for k, v in module.__dict__.items() if "Logic" in k})
         return logic_maps
@@ -180,12 +181,17 @@ class MemoryLoader:
         open(Path.join(compile_dir, f"{project_name}.crypto"), "wb").write(prefix+encrypted_files)
 
     def iters_crypto_projects(self):
+        if not os.path.exists("compile_projects"):
+            return
         for project_file in os.listdir("compile_projects"):
             if not project_file.endswith(".crypto"):
                 continue
-            project_bytes = open(Path.join("compile_projects", project_file), "rb").read()
-            project_name, timer, fs = self.load_project(project_bytes)
-        self.reset_layouts(fs)
+            try:
+                project_bytes = open(Path.join("compile_projects", project_file), "rb").read()
+                project_name, timer, fs = self.load_project(project_bytes)
+                self.reset_layouts(fs)
+            except Exception as e:
+                logger.error(f"编译项目 [{project_file}] 加载失败: {e}")
 
     @classmethod
     def export_projects(cls, need_projects, root_dir=".", aging=None):

@@ -87,7 +87,9 @@ class BaseClickLogic(BaseLogic, ABC):
 
     @classmethod
     def parse_title(cls, title):
-        if isinstance(title, str) and title.startswith("data:image"):
+        if isinstance(title, PIL.Image.Image):
+            title = LogicAuxiliary.fill_bg(title)
+        elif isinstance(title, str) and title.startswith("data:image"):
             title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
         elif isinstance(title, str) and len(title) > 100:
             title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
