@@ -86,14 +86,17 @@ class MemoryLoader:
     @classmethod
     def get_logics_map(cls, logic_dir):
         logic_maps = {}
-        logic_dir = Path.filter(logic_dir[logic_dir.find("projects"):])
+
+        if logic_dir != 'logic':
+            logic_dir = Path.filter(logic_dir[logic_dir.find("projects"):])
+
         package = logic_dir.replace("./", "").replace("/", ".")
         modules_maps = {
             _.split(".")[0]: Path.join(logic_dir, _)
             for _ in (os.listdir(logic_dir) if os.path.exists(logic_dir) else []) if not _.startswith("__")
         }
         for module_name, path in modules_maps.items():
-            print(f"{package}.{module_name}")
+            # print(f"{package}.{module_name}")
             module = importlib.import_module(f"{package}.{module_name}")
             logic_maps.update({k: path for k, v in module.__dict__.items() if "Logic" in k})
         return logic_maps

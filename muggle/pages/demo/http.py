@@ -101,6 +101,7 @@ java_req_body_code = """
 python_demo_code = """
 import requests
 import base64
+import hashlib
 
 with open(r"main.png", "rb") as f:
     b = f.read()
@@ -114,6 +115,43 @@ r = requests.post("http://{host}/runtime/text/invoke", json={{
 {params_code}
 }})
 print(r.json())
+"""
+
+csharp_demo_code = """
+using System;
+using System.IO;
+using System.Text;
+using System.Net.Http;
+using System.Net.Http.Headers;
+
+string GetMD5Hash(string input)
+{{
+    using var md5 = MD5.Create();
+    var inputBytes = Encoding.UTF8.GetBytes(input);
+    var hashBytes = md5.ComputeHash(inputBytes);
+    return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+}}
+
+var imageBase64 = Convert.ToBase64String(File.ReadAllBytes("image.png"));
+{define_code}
+
+var payload = new
+{{
+    project_name = "{project_name}",
+    image = imageBase64,
+{params_code}
+}};
+
+var httpClient = new HttpClient();
+var httpResponse = await httpClient.PostAsync("http://{host}/runtime/text/invoke", new StringContent(
+    Newtonsoft.Json.JsonConvert.SerializeObject(payload),
+    Encoding.UTF8,
+    "application/json"
+));
+
+var responseString = await httpResponse.Content.ReadAsStringAsync();
+Console.WriteLine(responseString);
+
 """
 
 

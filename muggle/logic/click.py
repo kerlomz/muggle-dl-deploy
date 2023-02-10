@@ -295,15 +295,15 @@ class ClickByTextTitleLogic(BaseClickLogic):
 
     def process(self, image: InputImage, title: Title = None) -> Response:
         title = list(title) if title else None
+        print(title)
         target_ims, boxes = self.extract_target(image=image.pil)
         calc_score = self.project_config.get('calc_score') in [None, True]
-        need_text, block_classifications = self.session.cls.batch_predict(
+        need_text, block_classifications = self.session.engine['cls'].batch_predict(
             list(target_ims),
-            mode=self.project_config.get('mode'),
-            need_text=title,
+            need_title=title,
             order_func=None,
-            calc_score=calc_score
         )
+        # print(need_text)
         # print(need_text, block_classifications)
         blocks = Blocks.Archive.from_text(block_classifications, boxes)
         return BlockOrder.one_to_one(blocks, list(need_text)) if need_text else blocks

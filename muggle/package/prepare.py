@@ -15,6 +15,7 @@ from muggle.middleware.memory_load import MemoryLoader
 
 muggle_path = os.path.dirname(muggle.__file__)
 ext_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "ext")
+logic_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "logic")
 stardust_path = os.path.dirname(stardust.__file__)
 
 main_template = """
@@ -37,6 +38,7 @@ def add_logics(project_name):
     need_logic_name = project_entities.get(project_name).strategy
     global_logic_dir = "logic"
     global_logic_path = MemoryLoader.find_need_logic(global_logic_dir, need_logic_name)
+    print(global_logic_path)
     if global_logic_path:
         filename = os.path.basename(global_logic_path)
         return global_logic_path, path_join(dist_path, "logic", filename)
@@ -79,6 +81,8 @@ def get_models(need_projects):
 def build_prepare():
     shutil.copytree(muggle_path, os.path.join(build_path, "muggle"))
     shutil.copytree(ext_path, os.path.join(build_path, "ext"))
+    if os.path.exists(logic_path):
+        shutil.copytree(logic_path, os.path.join(build_path, "logic"))
     shutil.copytree(stardust_path, os.path.join(build_path, "stardust"))
     for main_name in ["main.py", "main_cpu.py", "main_gpu.py"]:
         open(os.path.join(build_path, main_name), "w", encoding="utf8").write(main_template)
