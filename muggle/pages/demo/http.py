@@ -132,7 +132,7 @@ string GetMD5Hash(string input)
     return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 }}
 
-var imageBase64 = Convert.ToBase64String(File.ReadAllBytes("image.png"));
+var imageBase64 = Convert.ToBase64String(File.ReadAllBytes("main.png"));
 {define_code}
 
 var payload = new
@@ -152,6 +152,140 @@ var httpResponse = await httpClient.PostAsync("http://{host}/runtime/text/invoke
 var responseString = await httpResponse.Content.ReadAsStringAsync();
 Console.WriteLine(responseString);
 
+"""
+
+
+nodejs_demo_code = """
+const restler = require('restler');
+const fs = require('fs');
+const path = require('path');
+const btoa = require('btoa');
+const crypto = require('crypto');
+
+const imageBase64 = btoa(fs.readFileSync(path.join(__dirname, 'main.png')));
+{define_code}
+
+const requestData = {{
+    image: imageBase64,
+    project_name: '{project_name}',
+{params_code}
+}};
+
+restler.post('http://{host}/runtime/text/invoke', {{
+    data: JSON.stringify(requestData),
+    headers: {{
+        'Content-Type': 'application/json',
+    }},
+}}).on('complete', function(result) {{
+    console.log(result);
+}});
+"""
+
+cpp_demo_code = """
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <boost/asio.hpp>
+#include <openssl/md5.h>
+#include <nlohmann/json.hpp>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
+
+
+
+using namespace boost::asio;
+using namespace boost::asio::ip;
+using json = nlohmann::json;
+
+std::string readFileToBase64(const std::string& filePath) {{
+    std::ifstream inputFileStream(filePath, std::ios::binary);
+    if (!inputFileStream) {{
+        std::cerr << "Cannot open file: " << filePath << std::endl;
+        return "";
+    }}
+
+    std::ostringstream fileContentStream;
+    fileContentStream << inputFileStream.rdbuf();
+
+    std::string fileContent = fileContentStream.str();
+    const char* buffer = fileContent.c_str();
+    size_t length = fileContent.size();
+
+    BIO* bio = BIO_new(BIO_f_base64());
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+    BIO* bioMem = BIO_new(BIO_s_mem());
+    bio = BIO_push(bio, bioMem);
+
+    BIO_write(bio, buffer, length);
+    BIO_flush(bio);
+
+    BUF_MEM* bufferPtr = nullptr;
+    BIO_get_mem_ptr(bio, &bufferPtr);
+    std::string base64Content(bufferPtr->data, bufferPtr->length);
+
+    BIO_free_all(bio);
+
+    return base64Content;
+}}
+
+std::string md5(const std::string& str) {{
+    unsigned char digest[MD5_DIGEST_LENGTH];
+    MD5(reinterpret_cast<const unsigned char*>(str.c_str()), str.size(), digest);
+    std::stringstream ss;
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {{
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(digest[i]);
+    }}
+    return ss.str();
+}}
+
+void sendRequest() {{
+
+    std::string mainBase64 = readFileToBase64("main.png");
+{define_code}  
+
+    json requestData;
+    requestData["project_name"] = "{project_name}";
+    requestData["image"] = mainBase64;
+{params_code}
+    std::string requestJson = requestData.dump();
+
+    std::string requestString = "POST /runtime/text/invoke HTTP/1.1\\r\\n";
+    requestString += "Host: {host} \\r\\n";
+    requestString += "Content-Type: application/json\\r\\n";
+    requestString += "Content-Length: " + std::to_string(requestJson.size()) + "\\r\\n";
+    requestString += "Connection: close\\r\\n\\r\\n";
+    requestString += requestJson;
+
+    io_context io;
+    tcp::resolver resolver(io);
+    tcp::resolver::results_type endpoints = resolver.resolve("{ip}", "{port}");
+    tcp::socket socket(io);
+    boost::asio::connect(socket, endpoints);
+
+    boost::asio::write(socket, boost::asio::buffer(requestString));
+
+    std::vector<char> responseBuffer;
+    boost::system::error_code error;
+    size_t responseLength = 0;
+    do {{
+        responseBuffer.resize(responseLength + 1024);
+        responseLength += socket.read_some(boost::asio::buffer(responseBuffer.data() + responseLength, 1024), error);
+    }} while (error != boost::asio::error::eof);
+
+    responseBuffer.resize(responseLength);
+    std::string responseString(responseBuffer.begin(), responseBuffer.end());
+    std::cout << responseString << std::endl;
+
+}}
+
+int main() {{
+    sendRequest();
+    return 0;
+}}
 """
 
 

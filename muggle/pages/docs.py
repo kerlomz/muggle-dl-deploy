@@ -7,7 +7,7 @@ from muggle.config import cli_args
 from muggle.pages.base import BaseLayout, T_Component, TaskArgs
 from muggle.pages.demo.http import (
     java_prefix_code, java_define_param_code, java_req_body_code, java_suffix_code,
-    python_demo_code, e_prefix_code, e_exec_code, e_suffix_code, csharp_demo_code
+    python_demo_code, e_prefix_code, e_exec_code, e_suffix_code, csharp_demo_code, nodejs_demo_code, cpp_demo_code
 )
 from muggle.engine.session import project_entities
 from muggle.constants import modules_enabled
@@ -111,6 +111,76 @@ class Demo:
 
         return csharp_demo_code.format(
             host=host, define_code=im_define, project_name=project_name,
+            params_code=sign_code + token_code + (json_title if params else "")
+        )
+
+    @classmethod
+    def nodejs(cls, host, project_name, params, token="", sign=""):
+        base_im_d = "const title{idx}Base64 = btoa(fs.readFileSync(path.join(__dirname, 'title_{idx}.png')));"
+        json_title = '    title: {title_var},\n'
+        md5_code = "crypto.createHash('md5').update(imageBase64.slice(0, 100) + 'SECRET_KEY').digest('hex')"
+        sign_code = f"    sign: {md5_code},\n" if sign else ""
+        token_code = f'    token: "{token}",\n' if token else ""
+        im_define = ""
+
+        for param in params:
+            if param['type'] == 'text':
+                json_title = json_title.format(title_var='"限定文本"')
+            elif param['type'] == 'image':
+                im_define = base_im_d.format(idx=0) + "\n"
+                json_title = json_title.format(title_var='title0Base64')
+            elif param['type'] == 'images':
+                im_define = "\n".join([
+                    base_im_d.format(idx=i)
+                    for i in range(len(param['value']))
+                ]) + "\n"
+                array_add_code = '[' + ', '.join([
+                    f'title{i}Base64' for i in range(len(param['value']))
+                ]) + ']'
+                json_title = json_title.format(title_var=array_add_code)
+            elif param['type'] == 'radio':
+                options = list(param['value'].keys())
+                json_title = json_title.format(title_var=f"\"限定选项: {' / '.join(options)}\"")
+            break
+
+        return nodejs_demo_code.format(
+            host=host, define_code=im_define, project_name=project_name,
+            params_code=sign_code + token_code + (json_title if params else "")
+        )
+
+    @classmethod
+    def cpp(cls, host, project_name, params, token="", sign=""):
+        base_im_d = '    std::string title{idx}Base64 = readFileToBase64("title_{idx}.png");'
+        json_title = '    requestData["title"] = {title_var};\n'
+        md5_code = 'md5(mainBase64.substr(0, 100) + "SECRET_KEY")'
+        sign_code = f'    requestData["sign"] = {md5_code},\n' if sign else ""
+        token_code = f'    requestData["token"] = "{token}",\n' if token else ""
+        im_define = ""
+
+        for param in params:
+            if param['type'] == 'text':
+                json_title = json_title.format(title_var='"限定文本"')
+            elif param['type'] == 'image':
+                im_define = base_im_d.format(idx=0) + "\n"
+                json_title = json_title.format(title_var='title0Base64')
+            elif param['type'] == 'images':
+                im_define = "\n".join([
+                    base_im_d.format(idx=i)
+                    for i in range(len(param['value']))
+                ]) + "\n"
+                array_add_code = '{' + ', '.join([
+                    f'title{i}Base64' for i in range(len(param['value']))
+                ]) + '}'
+                json_title = json_title.format(title_var=array_add_code)
+            elif param['type'] == 'radio':
+                options = list(param['value'].keys())
+                json_title = json_title.format(title_var=f"\"限定选项: {' / '.join(options)}\"")
+            break
+
+        ip, port = host.split(":") if ':' in host else ("$ip", "$port")
+
+        return cpp_demo_code.format(
+            host=host, define_code=im_define, project_name=project_name, ip=ip, port=port,
             params_code=sign_code + token_code + (json_title if params else "")
         )
 
@@ -304,7 +374,10 @@ class DocumentLayout(BaseLayout):
             from stardust.runtime import Runtime
             crypto = Runtime.get_class('BaseCrypto')
             dynamic_token = args.params.get('dynamic_token')
-            dynamic_tag = hashlib.md5(crypto.totp(cli_args.doc_tag.encode("utf8")).encode("utf8")).hexdigest()
+            project_name = args.params.get('project_name')
+            dynamic_tag = hashlib.md5(
+                (crypto.totp(cli_args.doc_tag.encode("utf8"))+project_name).encode("utf8")
+            ).hexdigest()
             if dynamic_token != dynamic_tag:
                 return Response(status_code=404)
         except:
@@ -360,6 +433,32 @@ class DocumentLayout(BaseLayout):
 
         items_cfgs = [{
             "value": f'```\n{csharp_code}\n```'
+        }]
+        return items_cfgs
+
+    def doc_nodejs_demo_map_fn(self, project_name, trial_days=None, token=None, quota=None, **kwargs):
+        project_config = project_entities.get(project_name)
+        items_cfgs = project_config.titles
+
+        csharp_code = Demo.nodejs(
+            self.req_params.host, project_name=project_name, params=items_cfgs, token=token, sign=self.secret_key
+        )
+
+        items_cfgs = [{
+            "value": f'```\n{csharp_code}\n```'
+        }]
+        return items_cfgs
+
+    def doc_cpp_demo_map_fn(self, project_name, trial_days=None, token=None, quota=None, **kwargs):
+        project_config = project_entities.get(project_name)
+        items_cfgs = project_config.titles
+
+        cpp_code = Demo.cpp(
+            self.req_params.host, project_name=project_name, params=items_cfgs, token=token, sign=self.secret_key
+        )
+
+        items_cfgs = [{
+            "value": f'```\n{cpp_code}\n```'
         }]
         return items_cfgs
 
@@ -479,6 +578,30 @@ class DocumentLayout(BaseLayout):
                 value=f'```\n{default_csharp_demo}\n```'
             )
 
+        with gr.Accordion("NodeJS 用例", open=False):
+            default_nodejs_demo = Demo.nodejs(
+                host="$host",
+                project_name="项目名",
+                params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
+            )
+            demo_nodejs = self.widgets.markdown(
+                name="nodejs_code",
+                map_fn=self.doc_nodejs_demo_map_fn,
+                value=f'```\n{default_nodejs_demo}\n```'
+            )
+
+        with gr.Accordion("C++ 用例", open=False):
+            default_cpp_demo = Demo.nodejs(
+                host="$host",
+                project_name="项目名",
+                params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
+            )
+            demo_cpp = self.widgets.markdown(
+                name="cpp_code",
+                map_fn=self.doc_cpp_demo_map_fn,
+                value=f'```\n{default_cpp_demo}\n```'
+            )
+
         with gr.Accordion("易语言 用例", open=False):
             default_e_demo = Demo.e(
                 host="$host",
@@ -492,7 +615,7 @@ class DocumentLayout(BaseLayout):
             )
 
         val_project_name.bind([form_params])
-        return [demo_java, demo_python, demo_csharp, demo_e, form_params]
+        return [demo_java, demo_python, demo_csharp, demo_e, demo_nodejs, demo_cpp, form_params]
 
     def external_params_process(self, *external_params) -> dict:
         pass

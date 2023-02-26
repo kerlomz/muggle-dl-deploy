@@ -28,7 +28,8 @@ STARTUP_PARAM = {
     "use_builtin_corpus": True,
     "encryption_key": "@~-X(193)!",
     "dirty_data": False,
-    "warm_up": True
+    "warm_up": True,
+    "admin": ""
 }
 # print(STARTUP_PARAM)
 STARTUP_PARAM_FILE = "startup_param.yaml"
@@ -90,6 +91,7 @@ cli_parser.add_argument('--invoke_route', type=str, default=STARTUP_PARAM.get('i
 cli_parser.add_argument('--secret_key', type=str, default=STARTUP_PARAM.get('secret_key'))
 cli_parser.add_argument('--title', type=str, default=STARTUP_PARAM.get('title'))
 cli_parser.add_argument('--doc_tag', type=str, default=STARTUP_PARAM.get('doc_tag'))
+cli_parser.add_argument('--admin', type=str, default=STARTUP_PARAM.get('admin'))
 cli_parser.add_argument('--preview_prompt', type=str, default=STARTUP_PARAM.get('preview_prompt'))
 cli_parser.add_argument('--use_builtin_corpus', action="store_true", default=STARTUP_PARAM.get('use_builtin_corpus'))
 cli_args = cli_parser.parse_args()

@@ -139,7 +139,7 @@ class BaseParametricDisplays(BaseParametricComponent):
                 )
             )
             components.dropdown.instance.change(
-                lambda i: gr.update(value=list(choices_map.keys())[i]),
+                lambda i: gr.update(value=[]) if i is None else gr.update(value=list(choices_map.keys())[i]),
                 inputs=[components.dropdown.instance],
                 outputs=[variable.instance]
             )
@@ -209,7 +209,7 @@ class BaseParametricDisplays(BaseParametricComponent):
                     exam_title,
                 ],
                 fn=exam_fn,
-                _api_mode=True,
+                # _api_mode=True,
 
             )
             instance = utils.synchronize_async(instance.create)

@@ -22,6 +22,7 @@ from muggle.logger import logger
 from muggle.package.obfuscate import stardust_obfuscate
 from muggle.middleware.memory_load import MemoryLoader
 from muggle.engine.model import ONNXRuntimeEngine
+import charset_normalizer
 
 
 try:
@@ -50,6 +51,11 @@ if cuda_libs_exists and cuda_available and SYSTEM == 'Windows':
     cuda_libs_cmd = f'--include-data-dir=./muggle/package/lib/cuda/win=./'
 else:
     cuda_libs_cmd = ""
+
+
+is_charset_normalizer = os.path.exists(os.path.dirname(charset_normalizer.__file__))
+if is_charset_normalizer:
+    charset_normalizer_dir = os.path.dirname(charset_normalizer.__file__)
 
 logger.info(f'当前引擎类型 {"GPU" if cuda_available else "CPU"}')
 
@@ -180,6 +186,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--nofollow-import-to=markdown_it',
         '--nofollow-import-to=jinja2',
         '--nofollow-import-to=websockets',
+        '--nofollow-import-to=charset_normalizer',
         # '--nofollow-import-to=anyio',
         '--nofollow-import-to=starlette',
         '--follow-imports',
@@ -276,6 +283,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         f'--include-data-dir={os.path.dirname(gradio.__file__)}=gradio/',
         f'--include-data-dir={os.path.dirname(websockets.__file__)}=websockets/',
         f'--include-data-dir={os.path.dirname(altair.__file__)}=altair/',
+        f'--include-data-dir={charset_normalizer_dir}=charset_normalizer/' if is_charset_normalizer else "",
         cuda_libs_cmd if cuda_libs_exists else "",
         # f'--include-data-dir={os.path.join(os.path.dirname(gradio.__file__), "templates")}=gradio/templates',
         f'--include-data-file={crypto_argv}',

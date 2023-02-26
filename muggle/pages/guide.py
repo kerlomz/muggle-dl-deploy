@@ -34,7 +34,7 @@ class GuideFns:
         try:
             from stardust.runtime import Runtime
             crypto = Runtime.get_class('BaseCrypto')
-            dynamic_code = crypto.totp(cli_args.doc_tag.encode("utf8"))
+            dynamic_code = crypto.totp(cli_args.doc_tag.encode("utf8")) + params.get('project_name')
             dynamic_tag = hashlib.md5(dynamic_code.encode("utf8")).hexdigest()
             base_uri = self.base_dynamic_doc_uri.format(dynamic_code=dynamic_tag)
             link = self.make_link(base_uri=base_uri, **params)

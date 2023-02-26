@@ -54,7 +54,7 @@ class ServerException(BaseException):
         return JSONResponse(
             content={
                 "uuid": self.current_uuid,
-                "msg": self.message,
+                "msg": str(self.message),
                 "data": "",
                 "success": False,
                 "code": self.code

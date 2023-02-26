@@ -157,7 +157,7 @@ class Handler:
             token = Import.get_class('Charge').get(request_token)
             if not token or not token.available(project_name=project_name):
                 raise ServerException(
-                    message="中间件<Charge>过程失败: 当前授权不存在或者已过期",
+                    message=f"中间件<Charge>过程失败: 当前授权不存在或者已过期, 请联系管理员{f', {cli_args.admin}' if cli_args.admin else ''}",
                     code=4053,
                     api_type=api_type,
                     project_name=project_name,

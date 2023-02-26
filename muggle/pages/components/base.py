@@ -28,7 +28,8 @@ class MapFnTemplate:
 class ComponentItem:
     value: Union[Dict] = None
     instance: Union[
-        gr.Radio, gr.Textbox, gr.Image, gr.Label, gr.Markdown, gr.Number, gr.Button, gr.Dataframe, gr.HTML, Examples
+        gr.Radio, gr.Textbox, gr.Image, gr.Label, gr.Markdown,
+        gr.Number, gr.Button, gr.Dataframe, gr.HTML, Examples, gr.Dropdown
     ] = None
 
     @property

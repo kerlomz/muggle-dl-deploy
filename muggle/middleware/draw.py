@@ -92,6 +92,16 @@ class Draw:
 
         project_entity = project_entities.get(project_name)
 
+        if not project_entity:
+            ServerException(
+                message="尚未选择项目",
+                code=1010,
+                api_type=APIType.IMAGE,
+                project_name=project_name,
+                remote_ip=remote_ip
+            )
+            return "", None
+
         options = [title for title in project_entity.titles if title['type'] == 'radio']
         option_map = {v: k for k, v in options[0]['value'].items()} if options else []
 
