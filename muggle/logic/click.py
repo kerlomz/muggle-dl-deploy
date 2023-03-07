@@ -7,6 +7,7 @@ import string
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
+import PIL.ImageEnhance
 import muggle
 import numpy as np
 from abc import ABC
@@ -141,13 +142,26 @@ class BaseClickLogic(BaseLogic, ABC):
 
         return in_range_group, out_range_group
 
+    def similarity_process(self, ims_title, ims_main, boxes_main):
+        orders = self.session.engine['sim'].batch_predict(
+            list(ims_title), list(ims_main),
+        )
+
+        need_title = [str(i) for i in orders]
+        main_text = [str(i + 1) for i in range(len(ims_main))]
+
+        blocks = Blocks.Archive.from_text(main_text, boxes_main)
+        return BlockOrder.one_to_one(blocks, need_title)
+
     def extract_target(
             self,
             image: ImageType,
             sub_name='det',
             split_area=None,
             sort=True,
-            expect_area=None
+            expect_area=None,
+            contrast=None,
+            sharpness=None
     ):
         predictions = self.session.engine[sub_name].predict(image)
 
@@ -191,7 +205,12 @@ class BaseClickLogic(BaseLogic, ABC):
             if expect_area and self.in_box(box, expect_area):
                 boxes.remove(box)
                 continue
-            im_group.append(image.crop(self.std_box(box)))
+            im = image.crop(self.std_box(box))
+            if contrast:
+                im = PIL.ImageEnhance.Contrast(im).enhance(contrast)
+            if sharpness:
+                im = PIL.ImageEnhance.Sharpness(im).enhance(sharpness)
+            im_group.append(im)
         if self.param.get('debug'):
             for idx, title_im in enumerate(im_group):
                 title_im.save(f"img/im_{idx}.png")
@@ -295,129 +314,24 @@ class ClickByTextTitleLogic(BaseClickLogic):
 
     def process(self, image: InputImage, title: Title = None) -> Response:
         title = list(title) if title else None
-        print(title)
+        # print(title)
         target_ims, boxes = self.extract_target(image=image.pil)
-        calc_score = self.project_config.get('calc_score') in [None, True]
-        need_text, block_classifications = self.session.engine['cls'].batch_predict(
-            list(target_ims),
-            need_title=title,
-            order_func=None,
-        )
-        # print(need_text)
-        # print(need_text, block_classifications)
-        blocks = Blocks.Archive.from_text(block_classifications, boxes)
-        return BlockOrder.one_to_one(blocks, list(need_text)) if need_text else blocks
-
-
-class ClickByImageTitleLogic(BaseClickLogic):
-
-    """
-    图片标题逻辑
-    """
-
-    def process(self, image: InputImage, title: Title = None) -> Response:
-        to_rgb = self.project_config.get('to_rgb')
-        need_items = self.session.engine['ctc'].predict(title, to_rgb=to_rgb)[0]
-        need_texts, scores = zip(*need_items)
-        need_text = "".join(need_texts)
-        target_ims, boxes = self.extract_target(image=image.pil)
-        need_text, block_classifications = self.session.engine['cls'].batch_predict(
-            list(target_ims),
-            mode=self.project_config.get('mode'),
-            need_text=list(need_text),
-            order_func=None,
-        )
-
-        blocks = Blocks.Archive.from_text(block_classifications, boxes)
-        return BlockOrder.one_to_one(blocks, list(need_text))
-
-
-class ClickByImageTitleDetLogic(BaseClickLogic):
-
-    def process(self, image: InputImage, title: Title = None) -> Response:
-        title_crop = self.project_config.get('title_crop')
-        main_crop = self.project_config.get('main_crop')
-
-        if title_crop:
-            title = image.pil.crop(title_crop)
-
-        if main_crop:
-            main = image.pil.crop(main_crop)
+        # calc_score = self.project_config.get('calc_score') in [None, True]
+        if title:
+            need_text, block_classifications = self.session.engine['cls'].batch_predict(
+                list(target_ims),
+                need_title=title,
+                order_func=None,
+            )
         else:
-            main = image
+            block_classifications = self.session.engine['cls'].batch_predict(
+                list(target_ims),
+                order_func=None,
+            )
 
-        title_ims, boxes = self.extract_target(
-            image=title,
-            # to_rgb=self.project_config.get('to_rgb'),
-            sub_name='title',
-            # threshold=self.project_config.get('title_threshold')
-        )
-
-        _, block_classifications = self.session.cls.batch_predict(
-            list(title_ims),
-            mode=self.project_config.get('mode'),
-            order_func=None,
-        )
-        need_text = [_[0][0] for _ in block_classifications]
-
-        target_ims, boxes = self.extract_target(image=main, sub_name='main')
-        need_text, block_classifications = self.session.cls.batch_predict(
-            list(target_ims),
-            mode=self.project_config.get('mode'),
-            need_text=list(need_text),
-            order_func=None,
-        )
         blocks = Blocks.Archive.from_text(block_classifications, boxes)
-        return BlockOrder.one_to_one(blocks, list(need_text))
 
-
-class ClickByCropImageTitleLogic(BaseClickLogic):
-
-    def process(self, image: InputImage, title: Title = None) -> Response:
-        title_crops = self.project_config.get('title_crops')
-
-        main_crop = self.project_config.get('main_crop')
-
-        main_image = image.pil.crop(main_crop) if main_crop else image
-        title_images = [title.crop(title_crop) if title else image.pil.crop(title_crop) for
-                        title_crop in title_crops]
-
-        y_offset = main_crop[1]
-
-        target_ims, boxes = self.extract_target(
-            image=main_image,
-            # to_rgb=self.project_config.get('to_rgb'),
-            expect_area=self.project_config.get('except_area')
-        )
-
-        # for idx, im in enumerate(target_ims):
-        #     im.save(f"img/main_{idx}.png")
-        #
-        # for idx, im in enumerate(title_images):
-        #     im.save(f"img/title_{idx}.png")
-        #
-        # if self.project_config.get('except_area'):
-
-        _, title_classifications = self.session.cls.batch_predict(
-            list(title_images),
-            mode=self.project_config.get('mode'),
-            order_func=None,
-        )
-
-        need_text = [_[0][0] for _ in title_classifications if _[0] != '-']
-        # print(need_text)
-
-        need_text, block_classifications = self.session.cls.batch_predict(
-            list(target_ims),
-            mode=self.project_config.get('mode'),
-            need_text=list(need_text),
-            order_func=None,
-        )
-        # print(need_text, '---', block_classifications)
-        block_classifications = [[(_[0], -1)] for _ in block_classifications]
-        boxes = [[box[0], box[1]+y_offset, box[2], box[3]+y_offset] + box[4:] for box in boxes]
-        blocks = Blocks.Archive.from_text(block_classifications, boxes)
-        return BlockOrder.one_to_one(blocks, list(need_text))
+        return BlockOrder.one_to_one(blocks, list(locals().get('need_text'))) if title else blocks
 
 
 class ClickBySimTextTitleLogic(BaseClickLogic):
@@ -442,19 +356,9 @@ class ClickBySimTextTitleLogic(BaseClickLogic):
 
         ims_main, boxes_main = self.extract_target(
             image=image.pil,
-            # to_rgb=self.project_config.get('to_rgb'),
             expect_area=self.project_config.get('except_area')
         )
-
-        orders = self.session.sim.batch_predict(
-            list(ims_title), list(ims_main),
-        )
-
-        need_title = [str(i) for i in orders]
-        main_text = [str(i + 1) for i in range(len(ims_main))]
-
-        blocks = Blocks.Archive.from_text(main_text, boxes_main)
-        return BlockOrder.one_to_one(blocks, need_title)
+        return self.similarity_process(ims_title, ims_main, boxes_main)
 
 
 class ClickBySemanticLogic(BaseClickLogic):
@@ -521,30 +425,6 @@ class ClickByOrderLogic(BaseClickLogic):
 
         blocks = Blocks.Archive.from_text(block_classifications, boxes)
         return BlockOrder.one_to_one(blocks, list(need_title)) if order_func else blocks
-
-
-class ClickByGridLogic(BaseClickLogic):
-
-    """
-    格子多选模型逻辑
-    """
-
-    def process(self, image: InputImage, title: Title = None) -> Response:
-        crop_params = self.project_config.get('crop_params')
-        main_params = crop_params.get('main')
-        title_params = crop_params.get('title')
-        if title_params:
-            title_params = self.get_crop_param(title_params)
-            title, _ = self.crop(image, title_params)
-            _, title = self.session.engine['title'].predict(title[0])
-        main_params = self.get_crop_param(main_params)
-        im_group, boxes = self.crop(image, main_params)
-        need_text, block_classifications = self.session.cls.get('image').batch_predict(
-            list(im_group),
-            need_title=title[0],
-        )
-        blocks = Blocks.Archive.from_index(block_classifications, boxes)
-        return BlockOrder.one_to_many(blocks, list(need_text))
 
 
 class ClickSliderLogic(BaseClickLogic):

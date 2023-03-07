@@ -82,10 +82,22 @@ class ProcessUtils:
         im = np.divide(im, [[list(std)]])
         return im.transpose(2, 0, 1)
 
+    @classmethod
+    def resize_shape(cls, input_image, input_shape):
+        w0, h0 = input_shape
+        if not isinstance(w0, str):
+            return w0, h0
+        w1, h1 = input_image.size
+        w0 = int(h0 / h1 * w1)
+        return w0, h0
+
     def std_load_func(self, input_image: InputImage, input_shape=None):
         to_rgb = self.model_cfg.get("to_rgb", False)
         input_shape = self.runtime_engine.input_shape if input_shape is None else input_shape
-        im = input_image.resize(input_shape[2:][::-1], resample=PIL.Image.BILINEAR)
+
+        resize_shape = input_shape[2:][::-1]
+        resize_shape = self.resize_shape(input_image, resize_shape)
+        im = input_image.resize(resize_shape, resample=PIL.Image.BILINEAR)
         if im.mode == 'P' and not to_rgb and input_shape[1] == 3:
             im = im.convert("RGB")
         im = np.asarray(im)

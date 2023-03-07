@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import pickle
+import atexit
+import json
 import os
 import time
 import uuid
@@ -8,6 +11,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from muggle.exception import ServerException
 from muggle.config import STARTUP_PARAM
+from muggle.logger import logger
 
 
 class Ageing:
@@ -58,12 +62,35 @@ class Token:
         return f'{days} 天 {hours} 时 {minutes} 分 {seconds} 秒'
 
 
+class Persistence:
+    def __init__(self, ctx, filename):
+        self.ctx = ctx
+        self.filename = filename
+        self.data = {}
+        if os.path.exists(self.filename):
+            try:
+                with open(self.filename, "rb") as f:
+                    self.data = pickle.load(f)
+            except Exception as e:
+                logger.warning(f"中间件<Charge> 持久化记录初始化失败: {e}")
+        self.ctx.update(self.data)
+        atexit.register(self._save)
+
+    def dumps(self):
+        self.data = self.ctx
+
+    def _save(self):
+        with open(self.filename, "wb") as f:
+            pickle.dump(self.data, f)
+
+
 class Charge:
 
     def __init__(self, ctx, interface):
         self.ctx = ctx
         self.interface = interface
         self.setting_route()
+        self.persistence = Persistence(self.ctx, ".charge")
 
     def add(self, token_id, quota, project_name, seconds=0, minutes=0, hours=0, days=0):
         self.ctx[token_id] = Token(
@@ -73,8 +100,12 @@ class Charge:
         )
         return self.ctx[token_id].info()
 
+    @property
     def all_info(self):
         return {k: v.info() for k, v in self.ctx.items()}
+
+    def dumps(self):
+        return self.persistence.dumps()
 
     def get(self, uid) -> Token:
         return self.ctx.get(uid)
@@ -90,7 +121,7 @@ class Charge:
         async def display(request: Request):
             st = time.time()
             try:
-                all_data = self.all_info()
+                all_data = self.all_info
             except RuntimeError as e:
                 return ServerException(e.args[0], 403, request=request).response()
             response = {

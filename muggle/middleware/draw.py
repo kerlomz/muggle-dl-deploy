@@ -26,7 +26,7 @@ from muggle.handler import Handler
 from collections import namedtuple
 
 
-RESOURCE = namedtuple('Resource', ['index', 'text', 'default'])
+RESOURCE = namedtuple('Resource', ['index', 'text', 'small_text', 'default'])
 mini_prompt = preview_prompt.split("，")[-1] if preview_prompt and '，' in preview_prompt else ""
 
 
@@ -54,10 +54,14 @@ class Draw:
             except:
                 raise RuntimeError(f"字体资源 [{text_font_path}] 加载失败")
             try:
+                small_text_font = PIL.ImageFont.truetype(text_font_path, 20)
+            except:
+                raise RuntimeError(f"字体资源 [{text_font_path}] 加载失败")
+            try:
                 default_font = PIL.ImageFont.truetype(default_font_path, 35)
             except:
                 raise RuntimeError(f"字体资源 [{default_font_path}] 加载失败")
-            return RESOURCE(index=index_font, text=text_font, default=default_font)
+            return RESOURCE(index=index_font, text=text_font, small_text=small_text_font, default=default_font)
 
     @classmethod
     def is_null_list(cls, images):
@@ -138,6 +142,7 @@ class Draw:
             self.resource = resource
             self.index_font = self.resource.index
             self.text_font = self.resource.text
+            self.small_text_font = self.resource.small_text
             self.default_font = self.resource.default
 
         def watermark(self, main_image, text, width):
@@ -239,6 +244,18 @@ class Draw:
             for index, (key, block) in enumerate(blocks):
                 x0, y0, x1, y1 = block.bounding_box[:4]
                 self.label_box(draw, (x0, y0, x1, y1), str(index + 1) if draw_label else "", self.index_font)
+            main_image.paste(canvas, (0, 0), canvas)
+            main_image = self.watermark(main_image, mini_prompt, main_image.width)
+            output_im = self.padding_bg(main_image)
+
+            # output_im.show()
+            return output_im
+
+        def blocks_text_click(self, main_image: PIL.Image.Image, blocks: Blocks, draw_label=True):
+            main_image, canvas, draw = self.new_canvas(main_image)
+            for index, (key, block) in enumerate(blocks):
+                x0, y0, x1, y1 = block.bounding_box[:4]
+                self.label_box(draw, (x0, y0, x1, y1), block.classification if draw_label else "", self.small_text_font)
             main_image.paste(canvas, (0, 0), canvas)
             main_image = self.watermark(main_image, mini_prompt, main_image.width)
             output_im = self.padding_bg(main_image)
@@ -366,13 +383,18 @@ class Draw:
             img_bytes = self.pil2bytes(pil_image)
         elif strategy.startswith("Click"):
             draw_label = logic.project_config.get('draw_label', True)
+            draw_text = logic.project_config.get('draw_text', False)
             crop_params = logic.project_config.get('crop_params')
             if crop_params and isinstance(blocks, list):
                 crop_params = crop_params.get('main') if crop_params.get('main') else crop_params
                 crops_map = logic.auxiliary.get_crop_param(crop_params)
                 pil_image = self.template.crops_click(input_image.pil, crops_map, blocks, draw_label)
             else:
-                pil_image = self.template.blocks_click(input_image.pil, blocks, draw_label)
+                if draw_text:
+                    pil_image = self.template.blocks_text_click(input_image.pil, blocks, draw_label)
+                else:
+                    pil_image = self.template.blocks_click(input_image.pil, blocks, draw_label)
+
             img_bytes = self.pil2bytes(pil_image)
         elif strategy == "JigsawLogic":
             crop_params = logic.project_config.get('crop_params')

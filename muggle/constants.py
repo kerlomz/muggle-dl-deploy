@@ -18,8 +18,7 @@ def description():
     # cli_args.port = 19196
     if Core.check_port_in_use(cli_args.port):
         raise RuntimeError('端口已被占用')
-    # logger.info(f"MUGGLE-DEPLOY - 作者 QQ: 27009583")
-    # logger.info(f'服务器已启动监听 http://0.0.0.0:{cli_args.port}')
+
     logger.info(
         f'当前启用模块 | {" | ".join(modules_enabled)} |'
     )

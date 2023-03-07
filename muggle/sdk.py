@@ -54,8 +54,11 @@ class SDK:
                 title = title[0] if len(title) == 1 else title
         else:
             title = None
-        image = PIL.Image.open(project_entity.input_images[0])
-        logic.execute(image, title=title)
+        try:
+            image = PIL.Image.open(project_entity.input_images[0])
+            logic.execute(image, title=title)
+        except Exception as e:
+            logger.warning(f"项目 [{project_entity.project_name}] 预热失败 [{e}]")
 
     @classmethod
     def warm_up_task(cls):

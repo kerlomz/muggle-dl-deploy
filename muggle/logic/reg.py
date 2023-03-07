@@ -50,8 +50,7 @@ class SliderRegLogic(BaseLogic):
 class RotateRegLogic(BaseLogic):
 
     def process(self, image: InputImage, title: Title = None) -> Response:
-        to_rgb = self.project_config.get('to_rgb')
-        predictions = self.session.reg.predict(image, to_rgb=to_rgb)
+        predictions = self.session.engine['reg'].predict(image.pil)
         degree = round(predictions[0] * 360)
         return degree
 

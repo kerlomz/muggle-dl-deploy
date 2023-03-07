@@ -288,6 +288,99 @@ int main() {{
 }}
 """
 
+lua_demo_code = """
+local http = require("socket.http")
+local json = require("json")
+local base64 = require("base64")
+local md5 = require("md5")
+
+function file_to_base64(filename)
+    local file = assert(io.open(filename, "rb"))
+    local data = file:read("*all")
+    file:close()
+    return base64.encode(data)
+end
+
+-- 转换为Base64编码
+local main_b64 = file_to_base64("main.png")
+{define_code}
+
+-- 组装JSON对象
+local json_data = {{
+  project_name = "{project_name}",
+  image = main_b64,
+{params_code}
+}}
+
+-- 将JSON对象转换为JSON字符串
+local payload = json.encode(json_data)
+
+local response = {{}}
+local res, status, headers = http.request{{
+    url = "http://{host}/runtime/text/invoke",
+    method = "POST",
+    headers = {{
+        ["Content-Type"] = "application/json",
+        ["Content-Length"] = #payload,
+    }},
+    source = ltn12.source.string(payload),
+    sink = ltn12.sink.table(response),
+}}
+
+local res_body = table.concat(response)
+---- 检查请求是否成功
+if res and status == 200 then
+    -- 解码JSON响应体
+    print(res_body)
+else
+    print(res_body)
+    print("HTTP request failed.")
+end
+"""
+
+php_demo_code = """
+<?php
+
+// 读取文件并将其转换为Base64编码
+function file_to_base64($filename) {{
+    $data = file_get_contents($filename);
+    return base64_encode($data);
+}}
+
+$main_b64 = file_to_base64("main.jpg");
+{define_code}
+
+// 计算签名
+$sign = md5(substr($main_b64, 0, 100) . "SECRET_KEY");
+
+// 组装JSON对象
+$json_data = [
+    "project_name" => "{project_name}",
+    "image" => $main_b64,
+{params_code}
+];
+
+// 将JSON对象转换为JSON字符串
+$payload = json_encode($json_data);
+
+// 发送HTTP POST请求
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "http://{host}/runtime/text/invoke");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "Content-Length: " . strlen($payload),
+]);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+
+// 解码JSON响应体
+$response_data = json_decode($response, true);
+print_r($response_data);
+"""
+
 
 e_prefix_code = """
 .版本 2
@@ -337,3 +430,5 @@ data ＝ 编码_Utf8到Ansi (网页_访问 (“http://{host}/runtime/text/invoke
 信息框 (data, 0, , )
 
 """
+
+

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import re
+import cv2
 import PIL.Image
+import numpy as np
+
 from muggle.entity import BoundingBox
 from difflib import SequenceMatcher
+mser = cv2.MSER_create()
 
 
 class LogicAuxiliary:

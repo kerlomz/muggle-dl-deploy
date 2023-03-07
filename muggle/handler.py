@@ -131,7 +131,7 @@ class Handler:
                 )
         try:
             blocks = logic.process(input_image, title=title)
-        except RuntimeError as e:
+        except Exception as e:
             with open("runtime-error.log", "w") as f:
                 f.write(traceback.format_exc())
 
@@ -164,6 +164,7 @@ class Handler:
                     request=request
                 )
             token.consume()
+            charge.dumps()
 
         if "Draw" in modules_enabled and logic.project_entity.outputs == 'image' and api_type == APIType.IMAGE:
             try:
@@ -224,7 +225,7 @@ if 'Docs' in modules_enabled:
 
 
 if 'Draw' in modules_enabled:
-    Import.dynamic_import("muggle.middleware.draw.Draw", instance=True, handler=Handler, uri="/preview")
+    Import.dynamic_import("muggle.middleware.draw.Draw", instance=True, handler=Handler, uri=["/preview", "/"])
     preview_layout = Import.get_class('Draw').layout
     interface_map["preview"] = preview_layout
 else:
@@ -241,6 +242,7 @@ if 'Charge' in modules_enabled:
         token_pool = get_context('fork').Manager().dict()
     token_pool.update({})
     Import.dynamic_import("muggle.middleware.charge.Charge", instance=True, ctx=token_pool, interface=interface)
+    charge = Import.get_class('Charge')
 
 if 'MemoryLoader' in modules_enabled:
     Import.dynamic_import(

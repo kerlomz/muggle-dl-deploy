@@ -7,7 +7,8 @@ from muggle.config import cli_args
 from muggle.pages.base import BaseLayout, T_Component, TaskArgs
 from muggle.pages.demo.http import (
     java_prefix_code, java_define_param_code, java_req_body_code, java_suffix_code,
-    python_demo_code, e_prefix_code, e_exec_code, e_suffix_code, csharp_demo_code, nodejs_demo_code, cpp_demo_code
+    python_demo_code, e_prefix_code, e_exec_code, e_suffix_code, csharp_demo_code,
+    nodejs_demo_code, cpp_demo_code, lua_demo_code, php_demo_code
 )
 from muggle.engine.session import project_entities
 from muggle.constants import modules_enabled
@@ -144,6 +145,72 @@ class Demo:
             break
 
         return nodejs_demo_code.format(
+            host=host, define_code=im_define, project_name=project_name,
+            params_code=sign_code + token_code + (json_title if params else "")
+        )
+
+    @classmethod
+    def lua(cls, host, project_name, params, token="", sign=""):
+        base_im_d = 'title_{idx} = file_to_base64("title_{idx}.png")'
+        json_title = '  title = {title_var},\n'
+        sign_code = '  sign = md5.sumhexa(main_b64:sub(1, 100) .. "SECRET_KEY"),\n' if sign else ""
+        token_code = f'  token = "{token}",\n' if token else ""
+        im_define = ""
+
+        for param in params:
+            if param['type'] == 'text':
+                json_title = json_title.format(title_var='"限定文本"')
+            elif param['type'] == 'image':
+                im_define = base_im_d.format(idx=0) + "\n"
+                json_title = json_title.format(title_var='title_0')
+            elif param['type'] == 'images':
+                im_define = "\n".join([
+                    base_im_d.format(idx=i)
+                    for i in range(len(param['value']))
+                ]) + "\n"
+                array_add_code = '{' + ', '.join([
+                    f'title_{i}' for i in range(len(param['value']))
+                ]) + '}'
+                json_title = json_title.format(title_var=array_add_code)
+            elif param['type'] == 'radio':
+                options = list(param['value'].keys())
+                json_title = json_title.format(title_var=f"\"限定选项: {' / '.join(options)}\"")
+            break
+
+        return lua_demo_code.format(
+            host=host, define_code=im_define, project_name=project_name,
+            params_code=sign_code + token_code + (json_title if params else "")
+        )
+
+    @classmethod
+    def php(cls, host, project_name, params, token="", sign=""):
+        base_im_d = '$title_{idx} = file_to_base64("title_{idx}.png");'
+        json_title = '    "title" => {title_var},\n'
+        sign_code = '    "sign" => md5(substr($main_b64, 0, 100) . "SECRET_KEY"),\n' if sign else ""
+        token_code = f'    "token": "{token}",\n' if token else ""
+        im_define = ""
+
+        for param in params:
+            if param['type'] == 'text':
+                json_title = json_title.format(title_var='"限定文本"')
+            elif param['type'] == 'image':
+                im_define = base_im_d.format(idx=0) + "\n"
+                json_title = json_title.format(title_var='title_0')
+            elif param['type'] == 'images':
+                im_define = "\n".join([
+                    base_im_d.format(idx=i)
+                    for i in range(len(param['value']))
+                ]) + "\n"
+                array_add_code = '[' + ', '.join([
+                    f'$title_{i}' for i in range(len(param['value']))
+                ]) + ']'
+                json_title = json_title.format(title_var=array_add_code)
+            elif param['type'] == 'radio':
+                options = list(param['value'].keys())
+                json_title = json_title.format(title_var=f"\"限定选项: {' / '.join(options)}\"")
+            break
+
+        return php_demo_code.format(
             host=host, define_code=im_define, project_name=project_name,
             params_code=sign_code + token_code + (json_title if params else "")
         )
@@ -391,11 +458,12 @@ class DocumentLayout(BaseLayout):
         quota = args.params.get('quota')
         project_name = args.params.get('project_name')
         trial_days = args.params.get('trial_days')
-        info_cls = Import.get_class("Charge")
-        info = info_cls.add(
+        charge_cls = Import.get_class("Charge")
+        info = charge_cls.add(
             token_id=token, quota=int(quota), project_name=project_name, days=trial_days
         )
-        all_info = info_cls.all_info()
+        charge_cls.dumps()
+        all_info = charge_cls.all_info
 
     def doc_java_demo_map_fn(self, project_name, trial_days=None, token=None, quota=None, **kwargs):
         project_config = project_entities.get(project_name)
@@ -459,6 +527,32 @@ class DocumentLayout(BaseLayout):
 
         items_cfgs = [{
             "value": f'```\n{cpp_code}\n```'
+        }]
+        return items_cfgs
+
+    def doc_lua_demo_map_fn(self, project_name, trial_days=None, token=None, quota=None, **kwargs):
+        project_config = project_entities.get(project_name)
+        items_cfgs = project_config.titles
+
+        lua_code = Demo.lua(
+            self.req_params.host, project_name=project_name, params=items_cfgs, token=token, sign=self.secret_key
+        )
+
+        items_cfgs = [{
+            "value": f'```\n{lua_code}\n```'
+        }]
+        return items_cfgs
+
+    def doc_php_demo_map_fn(self, project_name, trial_days=None, token=None, quota=None, **kwargs):
+        project_config = project_entities.get(project_name)
+        items_cfgs = project_config.titles
+
+        php_code = Demo.php(
+            self.req_params.host, project_name=project_name, params=items_cfgs, token=token, sign=self.secret_key
+        )
+
+        items_cfgs = [{
+            "value": f'```\n{php_code}\n```'
         }]
         return items_cfgs
 
@@ -602,6 +696,30 @@ class DocumentLayout(BaseLayout):
                 value=f'```\n{default_cpp_demo}\n```'
             )
 
+        with gr.Accordion("Lua 用例", open=False):
+            default_lua_demo = Demo.lua(
+                host="$host",
+                project_name="项目名",
+                params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
+            )
+            demo_lua = self.widgets.markdown(
+                name="lua_code",
+                map_fn=self.doc_lua_demo_map_fn,
+                value=f'```\n{default_lua_demo}\n```'
+            )
+
+        with gr.Accordion("PHP 用例", open=False):
+            default_php_demo = Demo.php(
+                host="$host",
+                project_name="项目名",
+                params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
+            )
+            demo_php = self.widgets.markdown(
+                name="php_code",
+                map_fn=self.doc_php_demo_map_fn,
+                value=f'```\n{default_php_demo}\n```'
+            )
+
         with gr.Accordion("易语言 用例", open=False):
             default_e_demo = Demo.e(
                 host="$host",
@@ -615,7 +733,7 @@ class DocumentLayout(BaseLayout):
             )
 
         val_project_name.bind([form_params])
-        return [demo_java, demo_python, demo_csharp, demo_e, demo_nodejs, demo_cpp, form_params]
+        return [demo_java, demo_python, demo_csharp, demo_e, demo_nodejs, demo_lua, demo_php, demo_cpp, form_params]
 
     def external_params_process(self, *external_params) -> dict:
         pass

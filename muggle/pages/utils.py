@@ -70,8 +70,8 @@ class BlocksFuse:
         self.resource_route = [
             (r.path, r.endpoint, r.methods) for r in self.blocks.app.routes if r.path in self.resource_paths
         ]
-        self.setting_routes()
         self.shield_sys_docs()
+        self.setting_routes()
 
     @property
     def blocks_maps(self):
@@ -125,7 +125,7 @@ class BlocksFuse:
     #             print(f'重建资源路由 {f"{uri}{r[0]}"}')
     #             self.app.add_api_route(f"{uri}{r[0]}", r[1], methods=r[2])
     def shield_sys_docs(self):
-        del_routes = [route for i, route in enumerate(self.app.routes) if route.path == "/docs"]
+        del_routes = [route for i, route in enumerate(self.app.routes) if route.path in ["/docs", "/"]]
         for route in del_routes:
             # print(f'屏蔽自带路由 {route.path}, {route.endpoint}, {route}')
             self.app.routes.remove(route)
@@ -133,11 +133,25 @@ class BlocksFuse:
     def setting_routes(self):
         uri_rels = set()
         for name, layout in self.layouts_maps.items():
-            uri_rels.add("/".join(layout.uri.split("/")[:-1]))
-            self.app.add_api_route(layout.uri, layout.render_fn(self), methods=['GET'])
+            if isinstance(layout.uri, list):
+                for uri in layout.uri:
+                    uri_rels.add("/".join(uri.split("/")[:-1]))
+                    self.app.add_api_route(uri, layout.render_fn(self), methods=['GET'])
+            else:
+                uri_rels.add("/".join(layout.uri.split("/")[:-1]))
+                self.app.add_api_route(layout.uri, layout.render_fn(self), methods=['GET'])
         for uri in uri_rels:
             for r in self.resource_route:
                 self.app.add_api_route(f"{uri}{r[0]}", r[1], methods=r[2])
+
+    # def setting_routes(self):
+    #     uri_rels = set()
+    #     for name, layout in self.layouts_maps.items():
+    #         uri_rels.add("/".join(layout.uri.split("/")[:-1]))
+    #         self.app.add_api_route(layout.uri, layout.render_fn(self), methods=['GET'])
+    #     for uri in uri_rels:
+    #         for r in self.resource_route:
+    #             self.app.add_api_route(f"{uri}{r[0]}", r[1], methods=r[2])
 
     @property
     def app(self):

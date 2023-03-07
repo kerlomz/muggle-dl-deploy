@@ -20,14 +20,6 @@ ImageType = Union[
     List[PIL.GifImagePlugin.GifImageFile],
 ]
 
-unit_map = {
-    "hours": 60 * 60,
-    "minutes": 60,
-    "seconds": 1,
-    "days": 60 * 60 * 24,
-    "-": 0
-}
-
 
 @unique
 class RuntimeType(Enum):
