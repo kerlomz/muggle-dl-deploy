@@ -210,20 +210,3 @@ class Import:
         if name not in globals():
             globals()[name] = default_value
         return globals().get(name)
-
-
-if __name__ == '__main__':
-
-    root_dir = r"H:\gif\对验证码\对验证码"
-    target_dir = r"H:\gif\对验证码\对验证码-n3"
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    for i in os.listdir(root_dir):
-        n = os.path.join(root_dir, i)
-        label = i.split("_")[0]
-        testing_frames = Core.gif_loader(PIL.Image.open(n))
-        testing_blend = Core.blend_frame(testing_frames, need_frame=[1, 3])
-        testing_blend = PIL.ImageEnhance.Contrast(testing_blend).enhance(2.5)
-        # testing_blend = Core.illumination_correction(testing_blend)
-
-        testing_blend.save(os.path.join(target_dir, f"{label}_{int(time.time()*1000)}.png"))

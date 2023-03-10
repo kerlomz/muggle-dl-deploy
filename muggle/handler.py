@@ -191,7 +191,7 @@ class Handler:
                 uuid=Core.uuid(),
                 data=result_data,
                 image=img_bytes,
-                score=round(score, 3),
+                score=round(score, 4),
                 consume=consume
             )
 
@@ -199,7 +199,7 @@ class Handler:
             uuid=Core.uuid(),
             data=result_data,
             consume=consume,
-            score=round(score, 3)
+            score=round(score, 4)
         )
         if use_cache and "MD5Cache" in modules_enabled:
             Import.get_class("MD5Cache").put(input_image.hash, result_data)

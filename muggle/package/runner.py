@@ -114,7 +114,7 @@ def compile_projects(**kwargs):
     os.chdir(build_path)
     os.environ['PYTHONPATH'] = os.path.join(build_path)
 
-    compile_engine()
+    compile_engine(kwargs.get('user_info'))
 
     if kwargs.get('include_runtime') in [None, True]:
         compile_runtime(onefile=cli_args.onefile, compile_sdk=cli_args.compile_sdk)
@@ -141,7 +141,7 @@ def compile_projects(**kwargs):
     logger.info(f"编译路径 = {dist_path}")
 
 
-def compile_engine():
+def compile_engine(user_info=None):
     sys.argv = [
         f"{sys.executable} -m nuitka",
         " --module", "ext",
@@ -155,11 +155,13 @@ def compile_engine():
     engine_list = [
         _.split(".")[0] for _ in os.listdir(path_join(build_path, "ext", "engine")) if not _.startswith("__")
     ]
-    print(engine_list)
+    engine_loader = f"engine_list = {engine_list}"
+    user_info = f"user_info = '{user_info}'" if user_info else 'user_info = None'
+    loader_info = "\n".join([engine_loader, user_info])
+    open(path_join(build_path, "ext", "loader.py"), "w", encoding="utf8").write(loader_info)
     os.system(" ".join(sys.argv))
     ext_path = [_ for _ in os.listdir(build_path) if _.startswith("ext") and _.endswith("pyd") or _.endswith("so")][0]
     shutil.copy(path_join(build_path, ext_path), path_join(dist_path, "ext.pyd" if SYSTEM == 'Windows' else "ext.so"))
-    open(path_join(dist_path, "engine.map"), "w", encoding="utf8").write("\n".join(engine_list))
 
 
 def compile_runtime(onefile=False, compile_sdk=False):

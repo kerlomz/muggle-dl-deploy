@@ -27,17 +27,6 @@ class RuntimeType(Enum):
 
 
 @unique
-class HeadType(Enum):
-    CTC = 'CTC'
-    Cls = 'Cls'
-    YoloX = 'YoloX'
-    Yolo6 = 'Yolo6'
-    CenterNet = 'CenterNet'
-    EfficientDet = 'EfficientDet'
-    FastestDet = 'FastestDet'
-
-
-@unique
 class APIType(Enum):
     TEXT = 'Text'
     IMAGE = 'Image'
