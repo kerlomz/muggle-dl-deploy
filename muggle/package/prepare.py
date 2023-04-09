@@ -14,8 +14,15 @@ from muggle.middleware.memory_load import MemoryLoader
 
 
 muggle_path = os.path.dirname(muggle.__file__)
-ext_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "ext")
-logic_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "logic")
+if 'site-packages' in muggle_path:
+    ext_path = os.path.join(os.curdir, "ext")
+    logic_path = os.path.join(os.curdir, "logic")
+else:
+    ext_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "ext")
+    logic_path = os.path.join(os.path.dirname(os.path.dirname(muggle.__file__)), "logic")
+
+print(ext_path, logic_path)
+
 stardust_path = os.path.dirname(stardust.__file__)
 
 main_template = """

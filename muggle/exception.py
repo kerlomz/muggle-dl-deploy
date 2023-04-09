@@ -26,7 +26,8 @@ class ServerException(BaseException):
             api_type: APIType = None,
             project_name: str = None,
             request: Request = None,
-            remote_ip: str = None
+            remote_ip: str = None,
+            is_print=True
     ):
         super().__init__(message)
 
@@ -48,7 +49,8 @@ class ServerException(BaseException):
             f"[{project_name}] | "
         log_text += f"ERROR [{message}] "
         log_text += f"DETAIL [{self.current_uuid}]"
-        logger.error(log_text)
+        if is_print:
+            logger.error(log_text)
 
     def response(self):
         return JSONResponse(

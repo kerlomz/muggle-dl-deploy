@@ -96,6 +96,8 @@ class ProcessUtils:
         input_shape = self.runtime_engine.input_shape if input_shape is None else input_shape
 
         resize_shape = input_shape[2:][::-1]
+        if isinstance(input_image, list):
+            input_image = input_image[0]
         resize_shape = self.resize_shape(input_image, resize_shape)
         im = input_image.resize(resize_shape, resample=PIL.Image.BILINEAR)
         if im.mode == 'P' and not to_rgb and input_shape[1] == 3:

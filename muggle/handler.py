@@ -22,8 +22,7 @@ from muggle.utils import Import, Core
 from multiprocessing import get_context
 from muggle.entity import RequestBody, ResponseBody, ImageEntity, LogEntity
 from muggle.pages.utils import BlocksEntities, BlocksFuse
-from muggle.config import cli_args
-
+from muggle.config import cli_args, BLACKLIST, IP_COUNTS
 
 Logic = TypeVar('Logic', bound=BaseLogic)
 interface_map = {}
@@ -40,7 +39,7 @@ class Handler:
         sdk_module.__dict__.update({k: v for k, v in logic_module.__dict__.items() if k.endswith("Logic")})
 
     @classmethod
-    def parse_params(cls, param: RequestBody) -> Tuple[
+    def parse_params(cls, param: RequestBody, request: Optional[Request] = None) -> Tuple[
         str, Union[List[ImageEntity], ImageEntity], Union[List[ImageEntity], ImageEntity, str]
     ]:
         input_images = param.image
@@ -51,6 +50,13 @@ class Handler:
         if not project_name:
             project_name = list(project_entities.all.keys())[0]
         if not project_config:
+            ip = request.client.host if request else None
+            if ip and ip not in IP_COUNTS:
+                IP_COUNTS[ip] = 0
+            elif ip and ip in IP_COUNTS:
+                IP_COUNTS[ip] += 1
+            if IP_COUNTS.get(ip, 0) > 10:
+                BLACKLIST.add(ip)
             raise RuntimeError(f"项目名 [{project_name}] 不存在")
 
         if isinstance(input_images, list):
@@ -223,14 +229,12 @@ if 'Docs' in modules_enabled:
     interface_map["guide"] = guide_layout
     interface_map["docs"] = docs_layout
 
-
 if 'Draw' in modules_enabled:
     Import.dynamic_import("muggle.middleware.draw.Draw", instance=True, handler=Handler, uri=["/preview", "/"])
     preview_layout = Import.get_class('Draw').layout
     interface_map["preview"] = preview_layout
 else:
     interface = BlocksEntities.empty_blocks()
-
 
 interface = BlocksFuse(**interface_map)
 interface.setting_routes()

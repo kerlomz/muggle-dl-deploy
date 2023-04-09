@@ -55,6 +55,7 @@ class ComponentType(Enum):
     Button = 'button'
     Table = 'table'
     HTML = 'html'
+    Code = 'code'
 
 
 class RequestBody(BaseModel):
@@ -358,4 +359,6 @@ ClassificationLabel = Union[
 DiscriminatorLabel = bool
 RegressionLabel = Union[float, List[float]]
 
-Response = Union[BoundingBox, RegressionLabel, ClassificationLabel, Blocks, Block, tuple, DiscriminatorLabel]
+Response = Union[
+    BoundingBox, RegressionLabel, ClassificationLabel, Blocks, Block, tuple, DiscriminatorLabel, PIL.Image.Image
+]

@@ -5,7 +5,7 @@ import PIL
 from muggle.handler import Handler, interface
 from muggle.entity import APIType
 from muggle.exception import ImageException, ServerException
-from muggle.config import cli_args
+from muggle.config import cli_args, BLACKLIST
 from muggle.constants import description
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -16,6 +16,24 @@ from fastapi.exceptions import RequestValidationError
 app = interface.app
 description()
 app_dir = os.path.dirname(__file__)
+
+
+# @app.middleware("http")
+# async def block_ips(request: Request, call_next):
+#     client_host = request.client.host
+#
+#     if client_host in BLACKLIST:
+#         return ServerException(
+#             message="Forbidden",
+#             code=403,
+#             api_type=None,
+#             project_name=None,
+#             request=request,
+#             is_print=False
+#         ).response()
+#
+#     response = await call_next(request)
+#     return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -67,7 +85,7 @@ async def invoke(request: Request, body: RequestBody):
             request=request,
         ).response()
     try:
-        project_name, input_image, title = Handler.parse_params(body)
+        project_name, input_image, title = Handler.parse_params(body, request)
     except PIL.UnidentifiedImageError:
         return ImageException(
             api_type=APIType.TEXT,
@@ -80,7 +98,7 @@ async def invoke(request: Request, body: RequestBody):
         return ServerException(
             message=e.args[0],
             code=500,
-            api_type=None,
+            api_type=APIType.TEXT,
             project_name=None,
             request=request,
         ).response()

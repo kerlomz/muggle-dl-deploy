@@ -189,6 +189,7 @@ class PreviewLayout(BaseLayout):
             input_titles,
             input_image,
             web_title,
+            web_desc,
             val_project_name,
             text_predict_label,
             image_predict_label,

@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 from __future__ import annotations
+import io
 import base64
 import json
 import gradio as gr
-from gradio import utils
+import gradio.processing_utils
+from gradio_client import utils as client_utils
 from typing import Union, List, Dict, Callable, Optional, Any
 from muggle.pages.components.base import BaseParametricComponent, ComponentItem, ComponentsItem, ComponentsValues
 from muggle.pages.utils import GradioCfg
 from muggle.entity import ComponentType
 from muggle.pages.components.examples import Examples
+from muggle.pages.components.utils import DisplayUtils
+
+
+gradio.processing_utils.encode_pil_to_base64 = DisplayUtils.encode_pil_to_base64
 
 
 class BaseParametricDisplays(BaseParametricComponent):
@@ -57,7 +63,7 @@ class BaseParametricDisplays(BaseParametricComponent):
                     visible=self.visible,
                     interactive=self.interactive,
                     elem_id=f"${name}_text_d",
-                    value="" if default_value is None else default_value,
+                    value="" if default_value is None else str(default_value),
                     placeholder=kwargs.get('placeholder', None)
                 )
             )
@@ -109,6 +115,18 @@ class BaseParametricDisplays(BaseParametricComponent):
                     interactive=self.interactive,
                     visible=self.visible,
                     elem_id=f"${name}_markdown_d",
+                    value=default_value
+                )
+            )
+        elif component_type is ComponentType.Code:
+            components.code = ComponentItem(
+                value=dict(visible=self.visible, value=None),
+                instance=gr.components.Code(
+                    label=label,
+                    interactive=self.interactive,
+                    visible=self.visible,
+                    elem_id=f"${name}_code_d",
+                    language=kwargs.get('language'),
                     value=default_value
                 )
             )
@@ -212,7 +230,7 @@ class BaseParametricDisplays(BaseParametricComponent):
                 # _api_mode=True,
 
             )
-            instance = utils.synchronize_async(instance.create)
+            instance = client_utils.synchronize_async(instance.create)
 
             components.example = ComponentItem(
                 value=dict(),
@@ -236,6 +254,7 @@ class BaseParametricDisplays(BaseParametricComponent):
         cfg.update(components.label.name, **values.label)
         cfg.update(components.number.name, **values.number)
         cfg.update(components.table.name, **values.table)
+        cfg.update(components.code.name, **values.code)
         return cfg.config
 
 
@@ -285,6 +304,15 @@ class ParametricMarkdown(BaseParametricDisplays):
         super(ParametricMarkdown, self).__init__(
             name, label if label else "", map_fn, ComponentType.Markdown,
             interactive=interactive, visible=visible, value=value
+        )
+
+
+class ParametricCode(BaseParametricDisplays):
+
+    def __init__(self, name, value, language, map_fn=None, label=None, interactive=True, visible=True):
+        super(ParametricCode, self).__init__(
+            name, label if label else "", map_fn, ComponentType.Code,
+            interactive=interactive, visible=visible, value=value, language=language
         )
 
 

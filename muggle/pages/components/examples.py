@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import csv
 import gradio as gr
+from pathlib import Path
 from typing import Union, List, Dict, Callable, Optional, Any
 from gradio import utils
 from gradio.context import Context
@@ -11,11 +12,11 @@ from gradio.flagging import CSVLogger
 from gradio.components import IOComponent
 from gradio.documentation import document
 
-gr.examples.CACHED_FOLDER = ".cached_examples"
+gr.helpers.CACHED_FOLDER = ".cached_examples"
 
 
 @document()
-class Examples(gr.examples.Examples):
+class Examples(gr.helpers.Examples):
 
     def __init__(
             self,
@@ -46,65 +47,41 @@ class Examples(gr.examples.Examples):
             _initiated_directly=False
         )
 
-    async def load_from_cache(self, example_id: int) -> List[Any]:
-        with open(self.cached_file, encoding="utf8") as cache:
-            examples = list(csv.reader(cache))
-        example = examples[example_id + 1]  # +1 to adjust for header
-        output = []
-        for component, value in zip(self.outputs, example):
-            try:
-                value_as_dict = ast.literal_eval(value)
-                assert utils.is_update(value_as_dict)
-                output.append(value_as_dict)
-            except (ValueError, TypeError, SyntaxError, AssertionError):
-                output.append(component.serialize(value, self.cached_folder))
-        return output
-
-    async def create(self) -> None:
-
-        async def load_example(example_id):
-            processed_example = self.non_none_processed_examples[
-                                    example_id
-                                ] + await self.load_from_cache(example_id)
-            return utils.resolve_singleton(processed_example)
-
-        if Context.root_block:
-            self.dataset.click(
-                load_example,
-                inputs=[self.dataset],
-                outputs=self.inputs_with_examples + (self.outputs if self.cache_examples else []),
-                postprocess=False,
-                queue=False,
-            )
-
-        await self.cache()
-
     async def cache(self) -> None:
-        if Context.root_block is None:
-            raise ValueError("Cannot cache examples if not in a Blocks context")
+        """
+        Caches all the examples so that their predictions can be shown immediately.
+        """
+        if not Path(self.cached_file).exists():
+            if Context.root_block is None:
+                raise ValueError("Cannot cache examples if not in a Blocks context")
 
-        cache_logger = CSVLogger()
+            # print(f"Caching examples at: '{utils.abspath(self.cached_folder)}'")
+            cache_logger = CSVLogger()
 
-        # create a fake dependency to process the examples and get the predictions
-        dependency = Context.root_block.set_event_trigger(
-            event_name="fake_event",
-            fn=self.fn,
-            inputs=self.inputs_with_examples,
-            outputs=self.outputs,
-            preprocess=self.preprocess and not self._api_mode,
-            postprocess=self.postprocess and not self._api_mode,
-            batch=self.batch,
-        )
-
-        fn_index = Context.root_block.dependencies.index(dependency)
-        cache_logger.setup(self.outputs, self.cached_folder)
-        for example_id, _ in enumerate(self.examples):
-            processed_input = self.processed_examples[example_id]
-            prediction = await Context.root_block.process_api(
-                fn_index=fn_index, inputs=processed_input, request=None
+            # create a fake dependency to process the examples and get the predictions
+            dependency, fn_index = Context.root_block.set_event_trigger(
+                event_name="fake_event",
+                fn=self.fn,
+                inputs=self.inputs_with_examples,  # type: ignore
+                outputs=self.outputs,  # type: ignore
+                preprocess=self.preprocess and not self._api_mode,
+                postprocess=self.postprocess and not self._api_mode,
+                batch=self.batch,
             )
-            output = prediction["data"]
-            cache_logger.flag(output)
-        # Remove the "fake_event" to prevent bugs in loading interfaces from spaces
-        Context.root_block.dependencies.remove(dependency)
-        Context.root_block.fns.pop(fn_index)
+
+            assert self.outputs is not None
+            cache_logger.setup(self.outputs, self.cached_folder)
+            for example_id, _ in enumerate(self.examples):
+                processed_input = self.processed_examples[example_id]
+                if self.batch:
+                    processed_input = [[value] for value in processed_input]
+                prediction = await Context.root_block.process_api(
+                    fn_index=fn_index, inputs=processed_input, request=None, state={}
+                )
+                output = prediction["data"]
+                if self.batch:
+                    output = [value[0] for value in output]
+                cache_logger.flag(output)
+            # Remove the "fake_event" to prevent bugs in loading interfaces from spaces
+            Context.root_block.dependencies.remove(dependency)
+            Context.root_block.fns.pop(fn_index)

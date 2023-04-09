@@ -226,7 +226,8 @@ class Draw:
             resize = (raw_w // 5 * 4, raw_h // 5 * 4)
             pad_w = resize[1] * 4
             pad_x = (pad_w - resize[0]) // 2
-            output_im = PIL.Image.new("RGBA", (pad_w, resize[1]), (0, 0, 0, 0))
+            c = random.randint(0, 15)
+            output_im = PIL.Image.new("RGBA", (pad_w, resize[1]), (c, c, c, c))
             main_image = main_image.resize(resize)
             output_im.paste(main_image, (pad_x, 0), main_image)
             return output_im

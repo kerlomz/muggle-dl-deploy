@@ -9,13 +9,14 @@ import shutil
 import anyio
 import jinja2
 import starlette
+import cryptography
 import markdown_it
 import Crypto.Cipher
 import platform
 import websockets
 import numpy.core.overrides
 from onnxruntime.capi import __file__ as capi_file
-from muggle.package.config import build_path, dist_path, path_join
+from muggle.package.config import build_path, dist_path, path_join, cache_path
 from muggle.package.prepare import build_prepare, copy_projects, get_models
 from muggle.config import cli_args, STARTUP_PARAM
 from muggle.logger import logger
@@ -98,11 +99,12 @@ def compile_projects(**kwargs):
     logger.info(cli_args.__dict__)
     cur_dir = os.getcwd()
 
-    try:
-        shutil.rmtree(build_path)
-        print("清理build目录成功")
-    except:
-        print("清理build目录失败")
+    if os.path.exists(build_path):
+        try:
+            shutil.rmtree(build_path)
+            print("清理build目录成功")
+        except:
+            print("清理build目录失败")
 
     if not os.path.exists(build_path):
         os.makedirs(build_path)
@@ -145,7 +147,7 @@ def compile_engine(user_info=None):
     sys.argv = [
         f"{sys.executable} -m nuitka",
         " --module", "ext",
-        # '--clang',
+        '--msvc=latest',
         '--include-package=ext',
         '--user-plugin=muggle/package/data-hiding.py',
         # '--user-plugin=muggle/package/vmp-plugin.py',
@@ -165,7 +167,15 @@ def compile_engine(user_info=None):
 
 
 def compile_runtime(onefile=False, compile_sdk=False):
+    import tqdm
+    import anyio
     import gradio
+    import fastapi
+    import uvicorn
+    import fontTools
+    import jsonschema
+    import gradio_client
+    import huggingface_hub
 
     cipher_path = os.path.dirname(Crypto.Cipher.__file__)
 
@@ -181,15 +191,24 @@ def compile_runtime(onefile=False, compile_sdk=False):
         f"{sys.executable} -m nuitka",
         '--clang' if SYSTEM == "Windows" else "",
         # '--clang',
+        # '--msvc=latest' if SYSTEM == "Windows" else "",
         '--nofollow-import-to=*.tests',
         '--nofollow-import-to=pandas',
-        # '--nofollow-import-to=gradio',
+        '--nofollow-import-to=anyio',
+        '--nofollow-import-to=fastapi',
+        '--nofollow-import-to=uvicorn',
+        # '--nofollow-import-to=huggingface_hub',
         '--nofollow-import-to=openvino',
         '--nofollow-import-to=markdown_it',
         '--nofollow-import-to=jinja2',
+        '--nofollow-import-to=tqdm',
+        '--nofollow-import-to=fontTools',
         '--nofollow-import-to=websockets',
+        # '--nofollow-import-to=jsonschema',
+        '--nofollow-import-to=gradio',
+        '--nofollow-import-to=gradio_client',
         '--nofollow-import-to=charset_normalizer',
-        # '--nofollow-import-to=anyio',
+        '--nofollow-import-to=cryptography',
         '--nofollow-import-to=starlette',
         '--follow-imports',
         '--plugin-enable=numpy',
@@ -198,6 +217,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--no-prefer-source-code',
         f'--windows-icon-from-ico=./muggle/resource/icon.{"ico" if SYSTEM == "Windows" else "png"}',
         '--include-package=cv2',
+        '--include-package=aiofiles',
         '--include-package=stardust.runtime',
         '--include-package=stardust.session',
         '--include-package=stardust.package',
@@ -224,14 +244,27 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=muggle.handler',
         '--include-package=easycython',
         '--include-package=cffi',
+        '--include-package=huggingface_hub',
         # '--include-package=gevent',
         # '--include-package=eventlet',
         # '--include-package=gunicorn',
         # '--include-package=waitress',
         # '--include-package=flask',
-        '--include-package=uvicorn',
+        # '--include-package=uvicorn',
+        '--include-package=jsonschema',
         '--include-package=psutil',
-        '--include-package=gradio',
+        '--include-package=itsdangerous',
+        # '--include-package=uvicorn',
+
+        # '--include-package=fastapi',
+        # '--include-package=fastapi.responses',
+        # '--include-package=fastapi.security',
+        # '--include-package=fastapi.templating',
+        # '--include-package=fastapi.applications',
+        # '--include-package=fastapi.middleware',
+        # '--include-package=fastapi.middleware.cors',
+        # '--include-package=gradio',
+        # '--include-package=gradio_client',
         '--include-package=mdurl',
         '--include-package=matplotlib',
         # '--include-package=pandas',
@@ -243,6 +276,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=pkg_resources.extern',
         '--include-package=pkg_resources._vendor',
         '--include-package=onnxruntime',
+        '--include-package=linkify_it',
         '--include-package=PIL.Image',
         '--include-package=PIL.ImageDraw',
         '--include-package=PIL.ImageFont',
@@ -260,12 +294,36 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=Crypto.Random',
         '--include-package=typing',
         '--include-package=pytz',
+        '--include-package=attr',
+        '--include-package=toolz',
+        '--include-package=ffmpy',
+        '--include-package=pydub',
+        '--include-package=multidict',
+        '--include-package=yarl',
+        '--include-package=async_timeout',
+        '--include-package=aiosignal',
+        '--include-package=frozenlist',
+        '--include-package=typing_extensions',
+        '--include-package=semantic_version',
+        '--include-package=httpx',
+        '--include-package=rfc3986',
+        '--include-package=httpcore',
+        '--include-package=mdit_py_plugins',
+
+        '--include-package=aiohttp',
+        '--include-package=orjson',
+        '--include-package=pydantic',
+        '--include-package=multipart',
+        '--include-package=fsspec',
+        '--include-package=packaging',
+        '--include-package=entrypoints',
+        '--include-package=pyrsistent',
         '--include-package=gunicorn.glogging' if SYSTEM != 'Windows' else '',
         '--include-package=markdown_it',
-        '--include-package=anyio',
+        '--include-package=colorama',
         '--include-package=OpenSSL.crypto',
         '--include-package=numpy.core.multiarray',
-        '--include-package=cryptography.hazmat.primitives.serialization.pkcs12',
+        # '--include-package=cryptography.hazmat.primitives.serialization.pkcs12',
         '--include-package=urllib3.contrib.pyopenssl',
         '--include-package=requests.adapters',
         f'--output-dir={dist_path}',
@@ -282,9 +340,17 @@ def compile_runtime(onefile=False, compile_sdk=False):
         f'--include-data-dir={os.path.dirname(anyio.__file__)}=anyio/',
         f'--include-data-dir={os.path.dirname(jinja2.__file__)}=jinja2/',
         f'--include-data-dir={os.path.dirname(starlette.__file__)}=starlette/',
+        f'--include-data-dir={os.path.dirname(tqdm.__file__)}=tqdm/',
+        f'--include-data-dir={os.path.dirname(fastapi.__file__)}=fastapi/',
         f'--include-data-dir={os.path.dirname(gradio.__file__)}=gradio/',
+        f'--include-data-dir={os.path.dirname(gradio_client.__file__)}=gradio_client/',
+        f'--include-data-dir={os.path.dirname(huggingface_hub.__file__)}=huggingface_hub/',
         f'--include-data-dir={os.path.dirname(websockets.__file__)}=websockets/',
         f'--include-data-dir={os.path.dirname(altair.__file__)}=altair/',
+        f'--include-data-dir={os.path.dirname(uvicorn.__file__)}=uvicorn/',
+        f'--include-data-dir={os.path.dirname(jsonschema.__file__)}=jsonschema/',
+        f'--include-data-dir={os.path.dirname(fontTools.__file__)}=fontTools/',
+        f'--include-data-dir={os.path.dirname(cryptography.__file__)}=cryptography/',
         f'--include-data-dir={charset_normalizer_dir}=charset_normalizer/' if is_charset_normalizer else "",
         cuda_libs_cmd if cuda_libs_exists else "",
         # f'--include-data-dir={os.path.join(os.path.dirname(gradio.__file__), "templates")}=gradio/templates',
@@ -299,6 +365,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--show-progress',
         f'./main_{"gpu" if cuda_available else "cpu"}.py' if SYSTEM == 'Windows' else './main.py',
         '--standalone',
+        f'--jobs=16',
     ]
 
     sdk_argv = [

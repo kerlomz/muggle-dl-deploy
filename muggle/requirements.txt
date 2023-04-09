@@ -26,7 +26,7 @@ ordered-set
 waitress
 easycython
 cffi
-gradio==3.12
+gradio==3.24.1
 markdown
 fastapi
 matplotlib
@@ -35,3 +35,5 @@ pytz
 jinja2
 psutil
 altair
+itsdangerous
+colorama

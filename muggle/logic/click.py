@@ -149,7 +149,6 @@ class BaseClickLogic(BaseLogic, ABC):
 
         need_title = [str(i) for i in orders]
         main_text = [str(i + 1) for i in range(len(ims_main))]
-
         blocks = Blocks.Archive.from_text(main_text, boxes_main)
         return BlockOrder.one_to_one(blocks, need_title)
 

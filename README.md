@@ -158,6 +158,7 @@ cd main.dist
 # 2.1 前台启动，用于测试环境安装是否有误 
 # ./main --port 19199 
 # 2.2 后台启动
+chmod 755 main.bin
 nohup ./main.bin --port 19199 &
 
 # 3. 查看 nohup 日志

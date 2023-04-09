@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
+import io
 import copy
 import json
+import base64
 import shutil
 import starlette.routing
 import gradio as gr
+
 from gradio import Blocks
 from gradio.context import Context
 from typing import Dict, List
 from gradio.routes import App
+
 
 
 class GradioCfg:
@@ -84,7 +88,7 @@ class BlocksFuse:
     @classmethod
     def clear_cache(cls):
         try:
-            shutil.rmtree(gr.examples.CACHED_FOLDER)
+            shutil.rmtree(gr.helpers.CACHED_FOLDER)
         except :
             pass
 

@@ -103,8 +103,8 @@ class ONNXRuntimeEngine(RuntimeEngine):
         # self.sess_options.intra_op_num_threads = multiprocessing.cpu_count() // 2
         # self.sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         # self.sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_PARALLEL
-        self.model_bytes = model_bytes
-        self.set_session(model_bytes)
+        # self.model_bytes = model_bytes
+        self.set_session(self.path_or_bytes)
         self.outputs_names = [_.name for _ in self.session.get_outputs()]
         self.inputs_names = [_.name for _ in self.session.get_inputs()]
         # self.warm_up()
@@ -112,7 +112,7 @@ class ONNXRuntimeEngine(RuntimeEngine):
     @property
     def hash(self) -> str:
         if not self._hash:
-            self._hash = hashlib.md5(self.model_bytes).hexdigest()
+            raise RuntimeError(f"[ONNXRuntimeEngine] 尚未初始化")
         return self._hash
 
     def set_session(self, model_bytes):
@@ -123,6 +123,9 @@ class ONNXRuntimeEngine(RuntimeEngine):
         self._session = onnxruntime.InferenceSession(
             model_bytes, sess_options, providers=providers
         )
+        self._hash = hashlib.md5(self.path_or_bytes).hexdigest()
+        self._session._model_bytes = None
+        self.path_or_bytes = None
 
     @property
     def input_shape(self) -> InputShape:

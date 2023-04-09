@@ -10,6 +10,7 @@ project_path = "projects"
 
 build_path = os.path.join(tempfile.gettempdir(), f"muggle_build")
 dist_path = os.path.join(tempfile.gettempdir(), f"muggle_dist")
+cache_path = os.path.join(dist_path, f"cache")
 
 
 if not os.path.exists(dist_path):

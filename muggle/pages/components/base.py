@@ -29,7 +29,7 @@ class ComponentItem:
     value: Union[Dict] = None
     instance: Union[
         gr.Radio, gr.Textbox, gr.Image, gr.Label, gr.Markdown,
-        gr.Number, gr.Button, gr.Dataframe, gr.HTML, Examples, gr.Dropdown
+        gr.Number, gr.Button, gr.Dataframe, gr.HTML, Examples, gr.Dropdown, gr.Code
     ] = None
 
     @property
@@ -53,6 +53,7 @@ class ComponentsItem:
     button: ComponentItem = field(default_factory=ComponentItem)
     table: ComponentItem = field(default_factory=ComponentItem)
     html: ComponentItem = field(default_factory=ComponentItem)
+    code: ComponentItem = field(default_factory=ComponentItem)
 
 
 @dataclass
@@ -67,6 +68,7 @@ class ComponentsValues:
     dropdown: Union[Dict] = field(default_factory=lambda: {})
     table: Union[Dict] = field(default_factory=lambda: {})
     html: Union[Dict] = field(default_factory=lambda: {})
+    code: Union[Dict] = field(default_factory=lambda: {})
 
 
 class BaseParametricComponent:
@@ -95,6 +97,7 @@ class BaseParametricComponent:
             markdown=cls.copy_dicts(component.markdown.value),
             dropdown=cls.copy_dicts(component.dropdown.value),
             html=cls.copy_dicts(component.html.value),
+            code=cls.copy_dicts(component.code.value),
         )
 
     @classmethod
@@ -202,11 +205,12 @@ class BaseParametricComponent:
                     visible=True, label=item_name, choices=option_names, value=option_names[0]
                 )
             elif item_type == 'text':
+                default_value = item_cfg.get('default_value', None)
                 components_values.text.update(
                     visible=item_visible,
                     # label=item_name,
                     placeholder=item_value if item_visible else "",
-                    value=item_cfg.get('default_value', None)
+                    value=str(default_value) if default_value else None
                 )
                 if item_visible is False:
                     components_values.text.update(value=item_value)
@@ -256,6 +260,11 @@ class BaseParametricComponent:
                 )
             elif item_type == 'html':
                 components_values.html.update(
+                    visible=item_visible,
+                    value=item_value
+                )
+            elif item_type == 'code':
+                components_values.code.update(
                     visible=item_visible,
                     value=item_value
                 )

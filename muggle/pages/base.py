@@ -16,7 +16,7 @@ from muggle.pages.components.displays import BaseParametricDisplays, GradioCfg
 from muggle.pages.components.displays import (
     ParametricText, ParametricLabel, ParametricImage,
     ParametricMarkdown, ParametricDropdown, ParametricNumber,
-    ParametricVariable, ParametricExample, ParametricButton, ParametricTable, ParametricHTML
+    ParametricVariable, ParametricExample, ParametricButton, ParametricTable, ParametricHTML, ParametricCode
 )
 
 T_Component = TypeVar('T_Component', bound=Union[ParametricInputs, BaseParametricDisplays])
@@ -85,6 +85,12 @@ class Widgets:
         return ParametricMarkdown(
             self.elem_name.format(name=name),
             value, map_fn=map_fn, label=label, interactive=interactive, visible=visible
+        )
+
+    def code(self, name, value, language=None, map_fn=None, label=None, interactive=False, visible=True):
+        return ParametricCode(
+            self.elem_name.format(name=name),
+            value, map_fn=map_fn, label=label, interactive=interactive, visible=visible, language=language
         )
 
     def html(self, name, value, map_fn=None):

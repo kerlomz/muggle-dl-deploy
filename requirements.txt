@@ -3,7 +3,7 @@ scikit-build
 certifi
 onnxruntime
 Pillow==8.4.0
-opencv-python-headless==4.5.5.64
+opencv-python-headless
 pyyaml
 requests
 tinyaes
@@ -24,7 +24,7 @@ pycryptodome
 ordered-set
 easycython
 cffi
-gradio==3.12.0
+gradio==3.24.1
 markdown
 fastapi
 matplotlib
@@ -35,3 +35,5 @@ markupsafe
 nuitka
 psutil
 altair
+itsdangerous
+colorama

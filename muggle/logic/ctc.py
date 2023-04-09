@@ -109,17 +109,11 @@ class AdaptionArithmeticCTCLogic(BaseLogic):
         return response
 
 
-class CondCTCLogic(BaseCTCLogic):
-
-    def process(self, image: InputImage, title: Title = None) -> Response:
-        raise NotImplementedError
-
-
 class DoubleCTCLogic(BaseCTCLogic):
 
     def process(self, image: InputImage, title: Title = None) -> Response:
         engine = self.session.default_engine
-        option_map = {v: i for i, (k, v) in enumerate(self.project_config.get('option_label_map').items())}
+        option_map = {v: k for i, (k, v) in enumerate(self.project_config.get('option_label_map').items())}
         if title not in map(str, option_map.values()):
             title = option_map[title]
         predictions = engine.predict(image.pil)

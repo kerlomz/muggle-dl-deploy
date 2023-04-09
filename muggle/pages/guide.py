@@ -15,7 +15,7 @@ from muggle.constants import modules_enabled
 class GuideFns:
 
     def __init__(self):
-        self.base_submit = f'<button class="gr-button gr-button-lg gr-button-secondary self-start" ' \
+        self.base_submit = f'<button class="lg primary svelte-1ipelgc" ' \
                            f'style="width: 100%;" {{onclick}}>跳转页面</button>'
         self.base_doc_uri = f"/runtime/{cli_args.doc_tag}/docs"
         self.base_dynamic_doc_uri = "/runtime/api/{dynamic_code}/docs"

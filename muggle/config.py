@@ -33,6 +33,17 @@ STARTUP_PARAM = {
 }
 # print(STARTUP_PARAM)
 STARTUP_PARAM_FILE = "startup_param.yaml"
+BLACKLIST_FILE = "blacklist.txt"
+
+if os.path.exists(BLACKLIST_FILE):
+    with open(BLACKLIST_FILE) as file:
+        BLACKLIST = set([line.strip() for line in file.readlines()])
+else:
+    BLACKLIST = set()
+
+IP_COUNTS = {
+
+}
 
 
 def resource_path(relative_path):
@@ -78,7 +89,7 @@ cli_parser.add_argument(
 )
 # 编译
 cli_parser.add_argument('--projects', type=str, nargs='+')
-cli_parser.add_argument("--onefile", action="store_true")
+# cli_parser.add_argument("--onefile", action="store_true")
 cli_parser.add_argument("--compile_sdk", action="store_true")
 cli_parser.add_argument('--aging', type=float, default=None)
 cli_parser.add_argument("--encrypted", action="store_true")
