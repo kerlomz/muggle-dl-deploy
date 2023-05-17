@@ -5,7 +5,7 @@ import gradio as gr
 from functools import partial
 from muggle.pages.base import BaseLayout, TaskArgs
 from muggle.engine.session import project_entities
-from muggle.config import STARTUP_PARAM
+from muggle.config import sys_args
 
 # project_entities = ProjectEntities()
 
@@ -49,7 +49,7 @@ class WebVision:
         if 'preview_prompt' in project_config.cfg:
             preview_prompt = project_config.cfg.get('preview_prompt')
         else:
-            preview_prompt = STARTUP_PARAM.get('preview_prompt')
+            preview_prompt = sys_args.get('preview_prompt')
         items_cfgs = [{
             "value": f"{preview_prompt}<br />"
         }]

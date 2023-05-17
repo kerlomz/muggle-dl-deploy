@@ -8,19 +8,21 @@ import uuid
 import yaml
 import base64
 import hashlib
-import gradio as gr
-import gradio.processing_utils
 import builtins
 import importlib
 from collections import OrderedDict
 from muggle.engine.project import Path, ProjectEntity
 from muggle.engine.model import ModelManager
 from stardust.runtime import Runtime
-from muggle.config import STARTUP_PARAM
+from muggle.config import sys_args, SYSTEM
+from muggle.constants import enable_modules
 from muggle.logger import logger
 from muggle.exception import ServerException
 from fastapi import Request
 from fastapi.responses import JSONResponse
+
+if enable_modules('Draw|Docs'):
+    import gradio_client.utils
 
 
 class MemoryLoader:
@@ -30,16 +32,28 @@ class MemoryLoader:
         self.handler = handler
         self.interface = interface
         self.setting_route()
-        # logger.info("[MemoryLoader] 中间件已加载, 支持项目内存动态加载")
+        logger.info("[MemoryLoader] 中间件已加载, 支持项目内存动态加载")
 
     def setting_route(self):
         self.interface.app.add_api_route("/runtime/import/project", self.logic_route, methods=["POST"])
 
     def reset_layouts(self, fs):
         create_open_with_fs = Runtime.get_method("create_open_with_fs")
-        encode_file_to_base64 = gradio.processing_utils.encode_file_to_base64
+        encode_file_to_base64 = gradio_client.utils.encode_file_to_base64
 
-        def encode(f, encryption_key=None):
+        # def encode_file_to_base64(f):
+        #     with open(f, "rb") as file:
+        #         encoded_string = base64.b64encode(file.read())
+        #         base64_str = str(encoded_string, "utf-8")
+        #         mimetype = gradio_client.utils.get_mimetype(f)
+        #         return (
+        #                 "data:"
+        #                 + (mimetype if mimetype is not None else "")
+        #                 + ";base64,"
+        #                 + base64_str
+        #         )
+
+        def encode(f):
             if fs and f in fs.namelist():
                 file_bytes = create_open_with_fs(fs)(f, "rb").read()
                 base64_str = base64.b64encode(file_bytes).decode()
@@ -47,7 +61,7 @@ class MemoryLoader:
                     os.makedirs(fr)
                 if not os.path.exists(f):
                     open(f, "wb").write(file_bytes)
-                mimetype = gradio.processing_utils.get_mimetype(f)
+                mimetype = gradio_client.utils.get_mimetype(f)
                 return (
                         "data:"
                         + (mimetype if mimetype is not None else "")
@@ -55,11 +69,15 @@ class MemoryLoader:
                         + base64_str
                 )
             else:
-                return encode_file_to_base64(f, encryption_key)
+                return encode_file_to_base64(f)
 
-        gradio.processing_utils.encode_file_to_base64 = encode
+        gradio_client.utils.encode_file_to_base64 = encode
 
-        self.interface.reset_layouts()
+        self.interface = self.interface.reset_layouts(
+            routes=[
+                ["/runtime/import/project", self.logic_route, ["POST"]],
+            ]
+        )
 
     @property
     def logic_route(self):
@@ -69,6 +87,16 @@ class MemoryLoader:
             try:
                 project_name, timer, fs = self.load_project(data)
             except RuntimeError as e:
+                if SYSTEM != 'Windows' and "已存在" in str(e.args[0]):
+                    response = {
+                        "uuid": str(uuid.uuid4()).replace("-", ""),
+                        "msg": f"项目已存在跳过加载",
+                        "data": "",
+                        "code": 0,
+                        "success": False,
+                        "consume": time.time() - st,
+                    }
+                    return JSONResponse(response, status_code=200)
                 return ServerException(e.args[0], 403, request=request).response()
             response = {
                 "uuid": str(uuid.uuid4()).replace("-", ""),
@@ -78,7 +106,8 @@ class MemoryLoader:
                 "success": True,
                 "consume": time.time() - st,
             }
-            self.reset_layouts(fs)
+            # if enable_modules('Draw'):
+            #     self.reset_layouts(fs)
             return JSONResponse(response, status_code=200)
 
         return memory_load
@@ -157,6 +186,7 @@ class MemoryLoader:
                 f"projects/{project_name}/logic/logic.py"
             ] = open(global_logic_path, "rb").read()
         private_logic_path = cls.find_need_logic(private_logic_dir, project_entity.strategy)
+
         if private_logic_path:
             packages[
                 f"projects/{project_name}/logic/logic.py"
@@ -166,7 +196,7 @@ class MemoryLoader:
             f"projects/{project_name}/project_cfg.yaml"
         ] = open(project_cfg_path, "rb").read()
 
-        base_encryption_key = STARTUP_PARAM.get('encryption_key')
+        base_encryption_key = sys_args.get('encryption_key')
         if dynamic_key:
             password = base_crypto.totp(base_encryption_key.encode("utf8"), aging=1800) + base_encryption_key[::-1]
             password = hashlib.md5(password.encode("utf8")).hexdigest().upper()
@@ -192,9 +222,14 @@ class MemoryLoader:
             try:
                 project_bytes = open(Path.join("compile_projects", project_file), "rb").read()
                 project_name, timer, fs = self.load_project(project_bytes)
-                self.reset_layouts(fs)
             except Exception as e:
                 logger.error(f"编译项目 [{project_file}] 加载失败: {e}")
+                continue
+            try:
+                if enable_modules('Draw'):
+                    self.reset_layouts(fs)
+            except Exception as e:
+                logger.error(f"编译项目 [{project_file}] 重建可视化布局失败: {e}")
 
     @classmethod
     def export_projects(cls, need_projects, root_dir=".", aging=None):
@@ -210,7 +245,7 @@ class MemoryLoader:
         base_crypto = Runtime.get_class('BaseCrypto')
         create_open_with_fs = Runtime.get_method("create_open_with_fs")
         dynamic_flag, project_crypto = project_crypto[:1], project_crypto[1:]
-        base_encryption_key = STARTUP_PARAM.get('encryption_key')
+        base_encryption_key = sys_args.get('encryption_key')
         if dynamic_flag == b'0':
             password = base_encryption_key[::-1]
         elif dynamic_flag == b'1':
@@ -260,14 +295,14 @@ class MemoryLoader:
             demo_image_dir = f".cached_examples/{project_name}/image"
             demo_title_dir = f".cached_examples/{project_name}/title"
             if filepath.startswith(demo_image_dir):
-                if not os.path.exists(demo_image_dir):
-                    os.makedirs(demo_image_dir)
-                open(filepath, "wb").write(_open(filepath, "rb").read())
+                if not os.path.exists(os.path.dirname(demo_title_dir)):
+                    os.makedirs(os.path.dirname(demo_title_dir))
+                builtins.open(os.path.abspath(filepath), "wb").write(_open(filepath, "rb").read())
                 project_cfg['input_images'].append(filepath)
             if filepath.startswith(demo_title_dir):
-                if not os.path.exists(demo_title_dir):
-                    os.makedirs(demo_title_dir)
-                open(filepath, "wb").write(_open(filepath, "rb").read())
+                if not os.path.exists(os.path.dirname(demo_title_dir)):
+                    os.makedirs(os.path.dirname(demo_title_dir))
+                builtins.open(os.path.abspath(filepath), "wb").write(_open(filepath, "rb").read())
                 filename = os.path.basename(filepath)
                 idx = int(filename.split(".")[0].split("_")[1]) if filename.startswith("title_") else 0
                 self.model_manager.project_entities.iter_image_titles(

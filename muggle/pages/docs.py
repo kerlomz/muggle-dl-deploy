@@ -2,8 +2,8 @@
 # -*- coding:utf-8 -*-
 import hashlib
 import gradio as gr
+from muggle.core.api.cli import cli_args
 from typing import Union, List, Tuple
-from muggle.config import cli_args
 from muggle.pages.base import BaseLayout, T_Component, TaskArgs
 from muggle.pages.demo.http import (
     java_prefix_code, java_define_param_code, java_req_body_code, java_suffix_code,
@@ -474,7 +474,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": java_code
+            "value": f"```java\n{java_code}\n```"
         }]
         return items_cfgs
 
@@ -486,7 +486,7 @@ class DocumentLayout(BaseLayout):
             self.req_params.host, project_name=project_name, params=items_cfgs, token=token, sign=self.secret_key
         )
         items_cfgs = [{
-            "value": python_code
+            "value": f"```python\n{python_code}\n```"
         }]
         return items_cfgs
 
@@ -499,7 +499,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": csharp_code
+            "value": f"```\n{csharp_code}\n```"
         }]
         return items_cfgs
 
@@ -512,7 +512,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": nodejs_code
+            "value": f"```\n{nodejs_code}\n```"
         }]
         return items_cfgs
 
@@ -525,7 +525,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": cpp_code
+            "value": f"```\n{cpp_code}\n```"
         }]
         return items_cfgs
 
@@ -538,7 +538,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": lua_code
+            "value": f"```\n{lua_code}\n```"
         }]
         return items_cfgs
 
@@ -551,7 +551,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": php_code
+            "value": f"```php\n{php_code}\n```"
         }]
         return items_cfgs
 
@@ -564,7 +564,7 @@ class DocumentLayout(BaseLayout):
         )
 
         items_cfgs = [{
-            "value": e_code
+            "value": f"```php\n{e_code}\n```"
         }]
         return items_cfgs
 
@@ -641,11 +641,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_java = self.widgets.code(
+            demo_java = self.widgets.markdown(
                 name="java_code",
                 map_fn=self.doc_java_demo_map_fn,
-                value=default_java_demo,
-                language="javascript"
+                value=f'\n```java\n{default_java_demo}\n```\n',
             )
 
         with gr.Accordion("Python 用例", open=False):
@@ -654,11 +653,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_python = self.widgets.code(
+            demo_python = self.widgets.markdown(
                 name="python_code",
                 map_fn=self.doc_python_demo_map_fn,
-                value=default_python_demo,
-                language="python",
+                value=f'\n```python\n{default_python_demo}\n```\n',
                 interactive=False
             )
 
@@ -668,11 +666,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_csharp = self.widgets.code(
+            demo_csharp = self.widgets.markdown(
                 name="csharp_code",
                 map_fn=self.doc_csharp_demo_map_fn,
-                value=default_csharp_demo,
-                language="javascript"
+                value=f'\n```\n{default_csharp_demo}\n```\n',
             )
 
         with gr.Accordion("NodeJS 用例", open=False):
@@ -681,11 +678,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_nodejs = self.widgets.code(
+            demo_nodejs = self.widgets.markdown(
                 name="nodejs_code",
                 map_fn=self.doc_nodejs_demo_map_fn,
-                value=default_nodejs_demo,
-                language="javascript"
+                value=f'\n```\n{default_nodejs_demo}\n```\n',
             )
 
         with gr.Accordion("C++ 用例", open=False):
@@ -694,11 +690,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_cpp = self.widgets.code(
+            demo_cpp = self.widgets.markdown(
                 name="cpp_code",
                 map_fn=self.doc_cpp_demo_map_fn,
-                value=default_cpp_demo,
-                language="javascript"
+                value=f'\n```\n{default_cpp_demo}\n```\n',
             )
 
         with gr.Accordion("Lua 用例", open=False):
@@ -707,11 +702,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_lua = self.widgets.code(
+            demo_lua = self.widgets.markdown(
                 name="lua_code",
                 map_fn=self.doc_lua_demo_map_fn,
-                value=default_lua_demo,
-                language="javascript"
+                value=f'\n```\n{default_lua_demo}\n```\n',
             )
 
         with gr.Accordion("PHP 用例", open=False):
@@ -720,11 +714,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_php = self.widgets.code(
+            demo_php = self.widgets.markdown(
                 name="php_code",
                 map_fn=self.doc_php_demo_map_fn,
-                value=default_php_demo,
-                language="javascript"
+                value=f'\n```php\n{default_php_demo}\n```\n',
             )
 
         with gr.Accordion("易语言 用例", open=False):
@@ -733,11 +726,10 @@ class DocumentLayout(BaseLayout):
                 project_name="项目名",
                 params=[{'name': '文本标题', 'type': 'text', 'value': '请输入限定文本（必填）'}]
             )
-            demo_e = self.widgets.code(
+            demo_e = self.widgets.markdown(
                 name="e_code",
                 map_fn=self.doc_e_demo_map_fn,
-                value=default_e_demo,
-                language="javascript"
+                value=f'\n```\n{default_e_demo}\n```\n',
             )
 
         val_project_name.bind([form_params])

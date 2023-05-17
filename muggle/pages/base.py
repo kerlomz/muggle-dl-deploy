@@ -81,13 +81,13 @@ class Widgets:
             map_fn, label=label, interactive=interactive, visible=visible, shape=shape, value=value
         )
 
-    def markdown(self, name, value, map_fn=None, label=None, interactive=True, visible=True):
+    def markdown(self, name, value, map_fn=None, label=None, interactive=True, visible=True, **kwargs):
         return ParametricMarkdown(
             self.elem_name.format(name=name),
             value, map_fn=map_fn, label=label, interactive=interactive, visible=visible
         )
 
-    def code(self, name, value, language=None, map_fn=None, label=None, interactive=False, visible=True):
+    def code(self, name, value, language=None, map_fn=None, label=None, interactive=True, visible=True):
         return ParametricCode(
             self.elem_name.format(name=name),
             value, map_fn=map_fn, label=label, interactive=interactive, visible=visible, language=language

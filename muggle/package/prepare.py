@@ -28,7 +28,7 @@ stardust_path = os.path.dirname(stardust.__file__)
 main_template = """
  #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-from muggle.main import serve
+from muggle import serve
 
 
 if __name__ == '__main__':
@@ -42,10 +42,13 @@ __init__template = """
 
 
 def add_logics(project_name):
+
+    builtins_logics = [_ for _ in importlib.import_module("muggle.logic").__dict__.keys() if _.endswith("Logic")]
     need_logic_name = project_entities.get(project_name).strategy
+    if need_logic_name in builtins_logics:
+        return None
     global_logic_dir = "logic"
     global_logic_path = MemoryLoader.find_need_logic(global_logic_dir, need_logic_name)
-    print(global_logic_path)
     if global_logic_path:
         filename = os.path.basename(global_logic_path)
         return global_logic_path, path_join(dist_path, "logic", filename)
@@ -75,6 +78,7 @@ def get_models(need_projects):
     model_paths = []
     for project_name in need_projects:
         project_entity = project_entities.get(project_name)
+        print(project_name)
         models = [model_name for _, model_name in project_entity.models.items()]
         model_dir = project_entity.project_path.model_dir
         for model in models:

@@ -69,7 +69,7 @@ class RequestBody(BaseModel):
 
 class ResponseBody(BaseModel):
     uuid: str = None
-    data: Union[int, str, List[int], List[str]] = None
+    data: Union[str, int, List[int], List[str]] = None
     image: Optional[bytes] = None
     score: Union[List[float], float]
     consume: float

@@ -14,7 +14,6 @@ from muggle.entity import ComponentType
 from muggle.pages.components.examples import Examples
 from muggle.pages.components.utils import DisplayUtils
 
-
 gradio.processing_utils.encode_pil_to_base64 = DisplayUtils.encode_pil_to_base64
 
 

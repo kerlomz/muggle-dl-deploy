@@ -100,7 +100,7 @@ class ProcessUtils:
             input_image = input_image[0]
         resize_shape = self.resize_shape(input_image, resize_shape)
         im = input_image.resize(resize_shape, resample=PIL.Image.BILINEAR)
-        if im.mode == 'P' and not to_rgb and input_shape[1] == 3:
+        if im.mode in ['P', 'L'] and not to_rgb and input_shape[1] == 3:
             im = im.convert("RGB")
         im = np.asarray(im)
         shape = im.shape

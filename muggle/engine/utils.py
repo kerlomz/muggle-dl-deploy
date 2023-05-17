@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
+import multiprocessing
+from multiprocessing import Manager, get_context
 from collections import namedtuple
+from typing import TypeVar, Generic
+
+K = TypeVar('K')
+V = TypeVar('V')
 
 base_projects_dir = "projects"
 MODEL_PATH = namedtuple('MODEL_PATH', [

@@ -4,15 +4,9 @@ import io
 import copy
 import json
 import base64
+import os
 import shutil
-import starlette.routing
-import gradio as gr
-
-from gradio import Blocks
-from gradio.context import Context
 from typing import Dict, List
-from gradio.routes import App
-
 
 
 class GradioCfg:
@@ -49,6 +43,7 @@ class BlocksEntities:
 
     @classmethod
     def empty_blocks(cls):
+        import gradio as gr
         with (blocks := gr.Blocks(title="Empty")):
             gr.HTML("")
         return blocks
@@ -88,11 +83,15 @@ class BlocksFuse:
     @classmethod
     def clear_cache(cls):
         try:
-            shutil.rmtree(gr.helpers.CACHED_FOLDER)
+            cache_dir = ".cached_examples"
+            useless_caches = [os.path.join(cache_dir, _) for _ in os.listdir(cache_dir) if _.isdigit()]
+            for c in useless_caches:
+                shutil.rmtree(c)
         except :
             pass
 
-    def reset_layouts(self):
+    # TODO BUG
+    def reset_layouts(self, routes):
         self.clear_cache()
         for name, layout in self.layouts_maps.items():
             layout.reset()
@@ -100,7 +99,8 @@ class BlocksFuse:
         blocks = self.merge()
         self.app.configure_app(blocks)
         self.blocks = blocks
-        self.setting_routes()
+        self.setting_routes(routes=routes)
+        return self
 
     def get_config(self, name):
         config = self.config_maps.get(name).copy()
@@ -134,7 +134,7 @@ class BlocksFuse:
             # print(f'屏蔽自带路由 {route.path}, {route.endpoint}, {route}')
             self.app.routes.remove(route)
 
-    def setting_routes(self):
+    def setting_routes(self, routes=None):
         uri_rels = set()
         for name, layout in self.layouts_maps.items():
             if isinstance(layout.uri, list):
@@ -147,6 +147,9 @@ class BlocksFuse:
         for uri in uri_rels:
             for r in self.resource_route:
                 self.app.add_api_route(f"{uri}{r[0]}", r[1], methods=r[2])
+        if routes:
+            for r in routes:
+                self.app.add_api_route(r[0], r[1], methods=r[2])
 
     # def setting_routes(self):
     #     uri_rels = set()

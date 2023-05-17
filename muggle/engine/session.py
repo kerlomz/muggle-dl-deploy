@@ -10,7 +10,6 @@ from muggle.engine.base import ModelEngineType
 from collections import OrderedDict, namedtuple
 from muggle.engine.impl import *
 from muggle.logger import logger
-from muggle.config import cli_args
 
 
 project_entities: ProjectEntities = ProjectEntities()

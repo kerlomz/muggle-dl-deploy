@@ -7,7 +7,6 @@ import PIL.Image
 import numpy as np
 import onnxruntime
 from abc import abstractmethod
-from muggle.config import cli_args
 from typing import Union, TypeVar, List
 from muggle.engine.model import ModelEntity, RuntimeEngineType, InputShape
 from muggle.engine.project import ProjectEntity

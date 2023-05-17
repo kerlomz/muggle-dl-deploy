@@ -3,7 +3,7 @@
 import uvicorn
 import muggle.logger
 import logging
-from muggle.config import SYSTEM, cli_args
+from muggle.core.api.cli import cli_args
 
 
 from gunicorn.app.base import BaseApplication
@@ -21,7 +21,7 @@ class GunicornServer(BaseApplication):
             'threads': cli_args.threads,
             'worker_class': 'uvicorn.workers.UvicornWorker',
             'max_requests': 1000,
-            'timeout': 15,
+            'timeout': 100,
             'keepalive': 1,
             # "logger_class": "loguru.GunicornLogger"
             # "preload": True

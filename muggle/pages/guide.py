@@ -6,7 +6,7 @@ from typing import Union, List, Tuple
 
 import gradio as gr
 from gradio.routes import templates, Request
-from muggle.config import cli_args
+from muggle.core.api.cli import cli_args
 from muggle.pages.base import BaseLayout, T_Component, TaskArgs
 from muggle.engine.session import project_entities
 from muggle.constants import modules_enabled

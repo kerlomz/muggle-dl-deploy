@@ -54,7 +54,7 @@ install_requires = [
     'requests', 'tinyaes', 'certifi', 'requests',
     'paramiko', 'six', 'zstandard', 'nuitka', 'loguru', 'jinja2', 'altair', 'itsdangerous', 'colorama',
     'pyyaml', 'pycryptodome', 'easycython', 'pyOpenSSL', 'cryptography', 'pydantic',
-    'fastapi', 'uvicorn', 'gradio==3.24.1', 'httpcore==0.15', 'markupsafe', 'numpy', 'Pillow', 'opencv-python-headless',
+    'fastapi', 'uvicorn', 'gradio==3.24.1', 'gradio-client==0.0.5', 'httpcore==0.15', 'markupsafe', 'numpy', 'Pillow', 'opencv-python-headless',
 ]
 
 dependency_links = []

@@ -118,7 +118,9 @@ class LogicAuxiliary:
         return src[max_index]
 
     @classmethod
-    def fill_bg(cls, image: PIL.Image.Image):
+    def fill_bg(cls, image: PIL.Image.Image, skip=False):
+        if skip:
+            return image
         bg = PIL.Image.new("RGBA", image.size, (255, 255, 255, 255))
         try:
             bg.paste(image, (0, 0), image)

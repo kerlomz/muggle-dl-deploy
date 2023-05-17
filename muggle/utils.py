@@ -23,6 +23,7 @@ import PIL.ImageEnhance
 from urllib import parse
 from typing import Union, Optional
 from muggle.entity import ImageEntity
+from functools import partial
 
 
 class Core:
@@ -210,3 +211,65 @@ class Import:
         if name not in globals():
             globals()[name] = default_value
         return globals().get(name)
+
+
+class Exp:
+
+    @classmethod
+    def tokenize(cls, expression):
+        return re.findall(r'\w+|[|&!()]', expression)
+
+    @classmethod
+    def _and(cls, tokens, func):
+        left = cls._or(tokens, func)
+        while tokens and tokens[0] == '&':
+            tokens.pop(0)
+            right = cls._or(tokens, func)
+            left = left and right
+        return left
+
+    @classmethod
+    def _or(cls, tokens, func):
+        left = cls._negate(tokens, func)
+        while tokens and tokens[0] == '|':
+            tokens.pop(0)
+            right = cls._negate(tokens, func)
+            left = left or right
+        return left
+
+    @classmethod
+    def _negate(cls, tokens, func):
+        if not tokens:
+            raise ValueError("Unexpected end of input")
+
+        if tokens[0] == '!':
+            tokens.pop(0)
+            return not cls._atom(tokens, func)
+        else:
+            return cls._atom(tokens, func)
+
+    @classmethod
+    def _atom(cls, tokens, func):
+        if not tokens:
+            raise ValueError("Unexpected end of input")
+
+        token = tokens.pop(0)
+        if token == '(':
+            result = cls._and(tokens, func)
+            if not tokens or tokens.pop(0) != ')':
+                raise ValueError("Mismatched parentheses in the input expression")
+            return result
+        else:
+            return func(token)
+
+    @classmethod
+    def parse_expression(cls, func, expression):
+        tokens = cls.tokenize(expression)
+        result = cls._and(tokens, func)
+        if tokens:
+            raise ValueError("Unexpected token after the end of the expression")
+        return result
+
+    @classmethod
+    def get_func(cls, func):
+        return partial(cls.parse_expression, func)

@@ -27,6 +27,7 @@ waitress
 easycython
 cffi
 gradio==3.24.1
+gradio-client==0.0.5
 markdown
 fastapi
 matplotlib
@@ -37,3 +38,4 @@ psutil
 altair
 itsdangerous
 colorama
+rfc3986

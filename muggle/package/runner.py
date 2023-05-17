@@ -14,16 +14,18 @@ import markdown_it
 import Crypto.Cipher
 import platform
 import websockets
+import charset_normalizer
 import numpy.core.overrides
 from onnxruntime.capi import __file__ as capi_file
-from muggle.package.config import build_path, dist_path, path_join, cache_path
+from muggle.package.config import build_path, dist_path, path_join, cache_path, path_filter
 from muggle.package.prepare import build_prepare, copy_projects, get_models
-from muggle.config import cli_args, STARTUP_PARAM
+from muggle.config import sys_args
 from muggle.logger import logger
 from muggle.package.obfuscate import stardust_obfuscate
 from muggle.middleware.memory_load import MemoryLoader
 from muggle.engine.model import ONNXRuntimeEngine
-import charset_normalizer
+from muggle.core.util.cli import cli_args
+import nuitka.freezer.IncludedDataFiles
 
 
 try:
@@ -67,15 +69,21 @@ gcc11_path = "/opt/rh/devtoolset-11"
 def encrypt_models(model_paths, root_dir):
     for model_path in model_paths:
         src, trt = model_path[0], model_path[1]
+        src_path = path_join(root_dir, src)
+        trt_path = path_join(root_dir, trt)
+
+        if not os.path.exists(src_path) and os.path.exists(trt_path):
+            continue
+
         packages = {
-            trt: open(path_join(root_dir, src), "rb").read()
+            trt: open(src_path, "rb").read()
         }
         encrypted_files = BaseCrypto.compress(
             tree=packages,
-            password=STARTUP_PARAM.get('encryption_key')
+            password=sys_args.get('encryption_key')
         )
-        open(path_join(root_dir, trt), "wb").write(encrypted_files)
-        os.remove(path_join(root_dir, src))
+        open(trt_path, "wb").write(encrypted_files)
+        os.remove(src_path)
 
 
 def compile_aging_projects(need_projects, root_dir=build_path, aging=60 * 30):
@@ -91,6 +99,7 @@ def compile_projects(**kwargs):
     # parser.add_argument('--projects', type=str, nargs='+')
     # parser.add_argument("--onefile", action="store_true")
     # opt = parser.parse_args()
+
     if cli_args.projects:
         logger.info(f"编译项目为 | {' | '.join(cli_args.projects)} |")
     else:
@@ -147,9 +156,10 @@ def compile_engine(user_info=None):
     sys.argv = [
         f"{sys.executable} -m nuitka",
         " --module", "ext",
-        '--msvc=latest',
+        '--clang' if SYSTEM == "Windows" else "",
+        # '--msvc=latest',
         '--include-package=ext',
-        # '--user-plugin=muggle/package/data-hiding.py',
+        '--user-plugin=muggle/package/data-hiding.py',
         # '--user-plugin=muggle/package/vmp-plugin.py',
         # '--include-package=onnxruntime',
         # '--include-package=numpy',
@@ -189,22 +199,21 @@ def compile_runtime(onefile=False, compile_sdk=False):
     sys.argv = [
         'source /opt/rh/devtoolset-11/enable && gcc --version &&' if os.path.exists(gcc11_path) else '',
         f"{sys.executable} -m nuitka",
-        '--clang' if SYSTEM == "Windows" else "",
+        # '--clang' if SYSTEM == "Windows" else "",
         # '--clang',
-        # '--msvc=latest' if SYSTEM == "Windows" else "",
+        '--msvc=latest' if SYSTEM == "Windows" else "",
+        '--noinclude-unittest-mode=allow',
         '--nofollow-import-to=*.tests',
         '--nofollow-import-to=pandas',
         '--nofollow-import-to=anyio',
         '--nofollow-import-to=fastapi',
         '--nofollow-import-to=uvicorn',
-        # '--nofollow-import-to=huggingface_hub',
         '--nofollow-import-to=openvino',
         '--nofollow-import-to=markdown_it',
         '--nofollow-import-to=jinja2',
         '--nofollow-import-to=tqdm',
         '--nofollow-import-to=fontTools',
         '--nofollow-import-to=websockets',
-        # '--nofollow-import-to=jsonschema',
         '--nofollow-import-to=gradio',
         '--nofollow-import-to=gradio_client',
         '--nofollow-import-to=charset_normalizer',
@@ -212,7 +221,6 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--nofollow-import-to=starlette',
         '--follow-imports',
         '--plugin-enable=numpy',
-        # '--plugin-enable=gevent',
         '--plugin-enable=pylint-warnings',
         '--no-prefer-source-code',
         f'--windows-icon-from-ico=./muggle/resource/icon.{"ico" if SYSTEM == "Windows" else "png"}',
@@ -223,8 +231,10 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=stardust.package',
         '--include-package=stardust.loader',
         '--include-package=stardust.crypto_utils',
-        '--include-package=muggle.fastapi_app',
-        '--include-package=muggle.sdk',
+        '--include-package=muggle.core.api.cli',
+        '--include-package=muggle.core.api.handler',
+        '--include-package=muggle.core.api.fastapi_app',
+        '--include-package=muggle.core.sdk',
         '--include-package=muggle.logic',
         '--include-package=muggle.engine',
         '--include-package=muggle.pages',
@@ -241,33 +251,14 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=muggle.categories',
         '--include-package=muggle.entity',
         '--include-package=muggle.constants',
-        '--include-package=muggle.handler',
         '--include-package=easycython',
         '--include-package=cffi',
         '--include-package=huggingface_hub',
-        # '--include-package=gevent',
-        # '--include-package=eventlet',
-        # '--include-package=gunicorn',
-        # '--include-package=waitress',
-        # '--include-package=flask',
-        # '--include-package=uvicorn',
         '--include-package=jsonschema',
         '--include-package=psutil',
         '--include-package=itsdangerous',
-        # '--include-package=uvicorn',
-
-        # '--include-package=fastapi',
-        # '--include-package=fastapi.responses',
-        # '--include-package=fastapi.security',
-        # '--include-package=fastapi.templating',
-        # '--include-package=fastapi.applications',
-        # '--include-package=fastapi.middleware',
-        # '--include-package=fastapi.middleware.cors',
-        # '--include-package=gradio',
-        # '--include-package=gradio_client',
         '--include-package=mdurl',
         '--include-package=matplotlib',
-        # '--include-package=pandas',
         '--include-package=matplotlib.figure',
         '--include-package=pyparsing',
         '--include-package=yaml',
@@ -321,41 +312,43 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--include-package=gunicorn.glogging' if SYSTEM != 'Windows' else '',
         '--include-package=markdown_it',
         '--include-package=colorama',
+        # '--include-package=websockets',
         '--include-package=OpenSSL.crypto',
         '--include-package=numpy.core.multiarray',
         # '--include-package=cryptography.hazmat.primitives.serialization.pkcs12',
         '--include-package=urllib3.contrib.pyopenssl',
         '--include-package=requests.adapters',
+        '--include-package=dateutil',
         f'--output-dir={dist_path}',
         '--onefile' if onefile is True else "",
         '--assume-yes-for-downloads',
         f'--include-data-file=./muggle/package/lib/zlibwapi.dll=./zlibwapi.dll' if cuda_available else "",
         f'--include-data-file=./muggle/corpus/*.*=./muggle/corpus/',
         f'--include-data-dir=./muggle/resource=./muggle/resource',
-        f'--include-data-file={os.path.join(os.path.dirname(gradio.__file__), "*.txt")}=./gradio/',
         f"--include-data-file={capi_argv}",
-        f'--include-data-dir={os.path.dirname(dns.__file__)}=dns/' if need_dns else "",
-        f'--include-data-dir={os.path.dirname(pandas.__file__)}=pandas/',
-        f'--include-data-dir={os.path.dirname(markdown_it.__file__)}=markdown_it/',
-        f'--include-data-dir={os.path.dirname(anyio.__file__)}=anyio/',
-        f'--include-data-dir={os.path.dirname(jinja2.__file__)}=jinja2/',
-        f'--include-data-dir={os.path.dirname(starlette.__file__)}=starlette/',
-        f'--include-data-dir={os.path.dirname(tqdm.__file__)}=tqdm/',
-        f'--include-data-dir={os.path.dirname(fastapi.__file__)}=fastapi/',
-        f'--include-data-dir={os.path.dirname(gradio.__file__)}=gradio/',
-        f'--include-data-dir={os.path.dirname(gradio_client.__file__)}=gradio_client/',
-        f'--include-data-dir={os.path.dirname(huggingface_hub.__file__)}=huggingface_hub/',
-        f'--include-data-dir={os.path.dirname(websockets.__file__)}=websockets/',
-        f'--include-data-dir={os.path.dirname(altair.__file__)}=altair/',
-        f'--include-data-dir={os.path.dirname(uvicorn.__file__)}=uvicorn/',
-        f'--include-data-dir={os.path.dirname(jsonschema.__file__)}=jsonschema/',
-        f'--include-data-dir={os.path.dirname(fontTools.__file__)}=fontTools/',
-        f'--include-data-dir={os.path.dirname(cryptography.__file__)}=cryptography/',
-        f'--include-data-dir={charset_normalizer_dir}=charset_normalizer/' if is_charset_normalizer else "",
         cuda_libs_cmd if cuda_libs_exists else "",
         # f'--include-data-dir={os.path.join(os.path.dirname(gradio.__file__), "templates")}=gradio/templates',
         f'--include-data-file={crypto_argv}',
+        f'--include-data-dir={path_filter(os.path.dirname(dns.__file__))}=dns/' if need_dns else "",
+        f'--include-data-dir={path_filter(os.path.dirname(pandas.__file__))}=pandas/',
+        f'--include-data-dir={path_filter(os.path.dirname(markdown_it.__file__))}=markdown_it/',
+        f'--include-data-dir={path_filter(os.path.dirname(anyio.__file__))}=anyio/',
+        f'--include-data-dir={path_filter(os.path.dirname(jinja2.__file__))}=jinja2/',
+        f'--include-data-dir={path_filter(os.path.dirname(starlette.__file__))}=starlette/',
+        f'--include-data-dir={path_filter(os.path.dirname(tqdm.__file__))}=tqdm/',
+        f'--include-data-dir="{path_filter(os.path.dirname(fastapi.__file__))}"/=fastapi/',
+        f'--include-data-dir={path_filter(os.path.dirname(gradio.__file__))}=gradio/',
+        f'--include-data-dir={path_filter(os.path.dirname(gradio_client.__file__))}=gradio_client/',
+        f'--include-data-dir={path_filter(os.path.dirname(huggingface_hub.__file__))}=huggingface_hub/',
+        f'--include-data-dir={path_filter(os.path.dirname(altair.__file__))}=altair/',
+        f'--include-data-dir={path_filter(os.path.dirname(uvicorn.__file__))}=uvicorn/',
+        f'--include-data-dir={path_filter(os.path.dirname(jsonschema.__file__))}=jsonschema/',
+        f'--include-data-dir={path_filter(os.path.dirname(fontTools.__file__))}=fontTools/',
+        f'--include-data-dir={path_filter(os.path.dirname(websockets.__file__))}=websockets/',
+        f'--include-data-dir={path_filter(os.path.dirname(cryptography.__file__))}=cryptography/',
+        f'--include-data-dir={charset_normalizer_dir}=charset_normalizer/' if is_charset_normalizer else "",
         # '--user-plugin=./muggle/package/data-hiding.py',
+        # '--enable-plugin=data-hiding',
         # '--user-plugin=./muggle/package/hinted-mods.py',
         '--nofollow-import-to=cython',
         '--plugin-enable=multiprocessing',
@@ -365,7 +358,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--show-progress',
         f'./main_{"gpu" if cuda_available else "cpu"}.py' if SYSTEM == 'Windows' else './main.py',
         '--standalone',
-        f'--jobs=16',
+        # f'--jobs=16',
     ]
 
     sdk_argv = [
@@ -379,6 +372,8 @@ def compile_runtime(onefile=False, compile_sdk=False):
         '--plugin-enable=pylint-warnings',
         '--no-prefer-source-code',
         '--include-package=muggle',
+        '--include-package-data=muggle.corpus',
+        '--module-name-choice=original',
         # '--include-package=stardust.runtime',
         # '--include-package=stardust.session',
         # '--include-package=stardust.package',
@@ -391,15 +386,17 @@ def compile_runtime(onefile=False, compile_sdk=False):
         f'--output-dir={dist_path}',
         # '--onefile' if onefile is True else "",
         '--assume-yes-for-downloads',
-
+        '--embed-data-files-run-time-pattern=muggle/corpus/*.dict',
+        # '--embed-data-files-compile-time-pattern=muggle/corpus/*.dict',
         # f'--include-data-file=./muggle/corpus/*.*=./muggle/corpus/',
         # f'--include-data-file=./muggle/resource/*.*=./muggle/resource/',
-        # f'--include-data-file=./muggle/templates/*.*=./muggle/templates/',
-        # f'--include-data-file=./muggle/static/*.*=./muggle/static/',
-        # '--user-plugin=./muggle/package/data-hiding.py',
-        # '--embed-',
+        '--user-plugin=./muggle/package/data-hiding.py',
+        # '',
+        # '--plugin-enable=datafile-inclusion-ng',
+        # '--module-name-choice=original',
+
+        # '--embed-data-files-compiletime-patter=./muggle/resource/*.*=./muggle/resource/',
         # '--nofollow-import-to=cython',
-        # '--plugin-enable=multiprocessing',
         # '--python-flag=no_annotations',
         # '--plugin-enable=pkg-resources',
         '--show-progress',
@@ -407,6 +404,7 @@ def compile_runtime(onefile=False, compile_sdk=False):
     ]
 
     print(" ".join(list(sys.argv)))
+    print(" ".join(sdk_argv))
     if compile_sdk:
         os.system(" ".join(sdk_argv))
     else:

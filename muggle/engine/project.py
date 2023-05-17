@@ -7,7 +7,7 @@ import yaml
 import importlib
 import base64
 from muggle.logger import logger
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Literal
 from collections import OrderedDict, namedtuple
 from dataclasses import dataclass, field
 from muggle.engine.utils import Path, base_projects_dir, PROJECT_PATH
@@ -49,6 +49,12 @@ class ProjectEntity:
         titles = self.cfg.get('titles')
         return titles if titles else []
 
+    def get_titles(self, title_type: Literal["text", "image", "images"]) -> dict:
+        for title in self.titles:
+            if title['type'] == title_type:
+                return title
+        return {}
+
     @property
     def input_images(self) -> list:
         input_images = self.cfg.get('input_images')
@@ -67,7 +73,7 @@ class ProjectEntity:
 class ProjectEntities:
 
     def __init__(self):
-        self.all = self.iter_projects_from_dirs()
+        self.all: OrderedDict[str, ProjectEntity] = self.iter_projects_from_dirs()
 
     @property
     def titles(self):
@@ -101,7 +107,7 @@ class ProjectEntities:
 
     @classmethod
     def iter_projects_from_dirs(cls) -> OrderedDict[str, ProjectEntity]:
-        all_models: OrderedDict[str, ProjectEntity] = OrderedDict()
+        all_models = OrderedDict()
         if not os.path.exists(base_projects_dir):
             return all_models
         for project_name in os.listdir(base_projects_dir):

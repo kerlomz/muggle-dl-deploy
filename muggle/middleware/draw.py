@@ -22,7 +22,7 @@ from muggle.entity import RequestBody
 from muggle.exception import ServerException
 from muggle.engine.session import project_entities
 from functools import partial
-from muggle.handler import Handler
+from muggle.core.api.handler import Handler
 from collections import namedtuple
 
 
@@ -106,10 +106,12 @@ class Draw:
             )
             return "", None
 
+        text_title = project_entity.get_titles("text").get('param')
+
         options = [title for title in project_entity.titles if title['type'] == 'radio']
         option_map = {v: k for k, v in options[0]['value'].items()} if options else []
 
-        if input_title:
+        if input_title and not text_title:
             title = input_title
         elif title_radio:
             title = option_map.get(title_radio)
@@ -120,7 +122,9 @@ class Draw:
         else:
             title = None
 
-        body = RequestBody(image=input_image, project_name=project_name, title=title)
+        extra_param = {text_title: input_title} if text_title else {}
+
+        body = RequestBody(image=input_image, project_name=project_name, title=title, extra=extra_param)
         try:
             project_name, input_image, title = handler.parse_params(body)
         except Exception as e:

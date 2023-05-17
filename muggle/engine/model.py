@@ -2,9 +2,10 @@
 # -*- coding:utf-8 -*-
 import builtins
 import hashlib
+import importlib
 import os
 import time
-
+import pkgutil
 import yaml
 import base64
 import threading
@@ -16,7 +17,7 @@ from abc import abstractmethod
 from muggle.logger import logger
 from typing import List, Tuple, Dict, Union, TypeVar, Set
 from dataclasses import dataclass, field
-from muggle.config import cli_args, STARTUP_PARAM, MUGGLE_DIR
+from muggle.config import sys_args, MUGGLE_DIR, sys_args
 from muggle.engine.utils import Path, MODEL_PATH, PROJECT_PATH
 from muggle.entity import RuntimeType
 from muggle.exception import ModelException
@@ -152,7 +153,7 @@ RuntimeEngineType = TypeVar('RuntimeEngineType', bound=RuntimeEngine)
 class RuntimeManager:
 
     def __init__(self):
-        self.engine_type: RuntimeType = RUNTIME_MAP[cli_args.engine]
+        self.engine_type: RuntimeType = RUNTIME_MAP[sys_args.get('engine_backend')]
         self.session_map = {}
         if self.engine_type == RuntimeType.ONNXRuntime:
             self.runtime_engine = ONNXRuntimeEngine
@@ -168,7 +169,7 @@ class RuntimeManager:
             encrypted_files = open_fn(model_path, "rb").read()
             fs = BaseCrypto.decompress(
                 encrypted_files,
-                STARTUP_PARAM.get('encryption_key') if not independent_key else independent_key
+                sys_args.get('encryption_key') if not independent_key else independent_key
             )
             model_bytes = create_open_with_fs(fs)(model_path, "rb").read()
         else:
@@ -229,28 +230,10 @@ class ModelManager:
     def __init__(self, project_entities: ProjectEntities):
         self.runtime_manager: RuntimeManager = RuntimeManager()
         self.project_entities: ProjectEntities = project_entities
-        self.builtin_corpus: Tuple[List[str], List[Set[str]]] = self.get_corpus(
-            os.path.join(MUGGLE_DIR, "corpus", "builtin.dict")
-        )
-        # self.warm_up_im = PIL.Image.new("RGB", (64, 64), (255, 255, 255))
+        self.builtin_corpus: Tuple[List[str], List[Set[str]]] = self.get_builtin_corpus()
         self.model_maps: Dict[str, ModelEntity] = {}
         self.path_maps: Dict[str, str] = {}
         self.iter_models()
-
-    # def warm_up_task(self, process_cls):
-    #     th = threading.Timer(10, self.batch_warm_up, (process_cls, ))
-    #     th.start()
-    #
-    # def batch_warm_up(self, process_cls):
-    #     logger.info("正在预热模型...")
-    #     for k, m in self.model_maps.items():
-    #         need_arr = []
-    #         for shape in m.model_runtime.input_shapes:
-    #             shape = [1 if isinstance(s, str) else s for s in shape]
-    #             arr = process_cls(m).std_load_func(self.warm_up_im, input_shape=shape)
-    #             need_arr.append([arr])
-    #         m.model_runtime.run(*need_arr)
-    #     logger.info("完成模型预热.")
 
     def timer_release(self, project_name, seconds=60):
         def unload():
@@ -271,8 +254,17 @@ class ModelManager:
         return self.from_id(model_id)
 
     @classmethod
-    def get_corpus(cls, path) -> Tuple[List[str], List[Set[str]]]:
-        lines = open(path, encoding="utf-8").read().splitlines(False)[::-1]
+    def get_corpus(cls, path, open_fn=builtins.open) -> Tuple[List[str], List[Set[str]]]:
+        lines = open_fn(path, encoding="utf-8").read().splitlines(False)[::-1]
+        return lines, [set(i) for i in lines]
+
+    @classmethod
+    def get_builtin_corpus(cls) -> Tuple[List[str], List[Set[str]]]:
+        if os.path.exists(raw_path := os.path.join(MUGGLE_DIR, "corpus", "builtin.dict")):
+            lines = open(raw_path, "r", encoding="utf8").read().splitlines(False)[::-1]
+            logger.info('发现并加载 [内置语料字典]')
+        else:
+            lines = pkgutil.get_data("muggle.corpus", "builtin.dict").decode("utf8").splitlines(False)[::-1]
         return lines, [set(i) for i in lines]
 
     def get_model(self, model_name, model_path: MODEL_PATH, open_fn=builtins.open, fs=None):
@@ -292,7 +284,7 @@ class ModelManager:
             categories = []
 
         if exists(model_path.corpus_path):
-            attach_corpus: Tuple[List[str], List[Set[str]]] = self.get_corpus(model_path.corpus_path)
+            attach_corpus: Tuple[List[str], List[Set[str]]] = self.get_corpus(model_path.corpus_path, open_fn=open_fn)
         else:
             attach_corpus: Tuple[List[str], List[Set[str]]] = [], []
 

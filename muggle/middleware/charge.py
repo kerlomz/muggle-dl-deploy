@@ -10,7 +10,7 @@ import datetime
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from muggle.exception import ServerException
-from muggle.config import STARTUP_PARAM
+from muggle.config import sys_args
 from muggle.logger import logger
 
 
@@ -112,7 +112,7 @@ class Charge:
 
     def setting_route(self):
         self.interface.app.add_api_route(
-            f"/runtime/{STARTUP_PARAM.get('doc_tag')}/display", self.display_route, methods=["GET"]
+            f"/runtime/{sys_args.get('doc_tag')}/display", self.display_route, methods=["GET"]
         )
 
     @property

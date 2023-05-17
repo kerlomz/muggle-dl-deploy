@@ -21,3 +21,6 @@ def path_join(parent, child, *args):
     return os.path.join(parent, child, *args).replace("\\", "/")
 
 
+def path_filter(parent):
+    return parent.replace("\\", "/")
+

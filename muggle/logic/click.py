@@ -15,7 +15,6 @@ from muggle.logic.base import BaseLogic, Response, Title
 from muggle.entity import Blocks, Block, BoundingBox, InputImage, ImageType
 from muggle.utils import Core
 from muggle.logic.utils import LogicAuxiliary
-from muggle.config import cli_args
 
 
 app_dir = os.path.dirname(muggle.__file__)
@@ -87,17 +86,17 @@ class BaseClickLogic(BaseLogic, ABC):
         return result, response.score
 
     @classmethod
-    def parse_title(cls, title):
+    def parse_title(cls, title, fill_bg=True):
         if isinstance(title, PIL.Image.Image):
-            title = LogicAuxiliary.fill_bg(title)
+            title = LogicAuxiliary.fill_bg(title, skip=not fill_bg)
         elif isinstance(title, str) and title.startswith("data:image"):
-            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
+            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil, skip=not fill_bg)
         elif isinstance(title, str) and len(title) > 100:
-            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil)
+            title = LogicAuxiliary.fill_bg(Core.text2image(title).pil, skip=not fill_bg)
         elif isinstance(title, str) and title.startswith("["):
-            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil) for _ in json.loads(title)]
+            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil, skip=not fill_bg) for _ in json.loads(title)]
         elif isinstance(title, list) and len(title) > 0 and isinstance(title[0], str) and len(title[0]) > 100:
-            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil) for _ in title]
+            title = [LogicAuxiliary.fill_bg(Core.text2image(_).pil, skip=not fill_bg) for _ in title]
         return title
 
     @classmethod
@@ -433,6 +432,20 @@ class ClickSliderLogic(BaseClickLogic):
     """
 
     def process(self, image: InputImage, title: Title = None) -> Response:
+
+        if title:
+            title = self.parse_title(title, fill_bg=False)
+            if resize_argv := self.project_config.get('resize'):
+                if 'main' in resize_argv:
+                    image.pil = image.pil.resize(tuple(resize_argv['main']))
+                if 'title' in resize_argv:
+                    title = title.resize(tuple(resize_argv['title']))
+            # else:
+            #     title = title.resize((title.width, image.pil.height))
+            image.pil = image.pil.convert("RGBA")
+            y = int(self.param['y']) if self.param.get('y') else 0
+            image.pil.paste(title, (0, y), title)
+
         target_ims, boxes = self.extract_target(image=image.pil)
         if not boxes:
             raise RuntimeError("识别失败")

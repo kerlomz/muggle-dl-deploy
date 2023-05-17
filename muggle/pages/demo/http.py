@@ -350,9 +350,6 @@ function file_to_base64($filename) {{
 $main_b64 = file_to_base64("main.jpg");
 {define_code}
 
-// 计算签名
-$sign = md5(substr($main_b64, 0, 100) . "SECRET_KEY");
-
 // 组装JSON对象
 $json_data = [
     "project_name" => "{project_name}",
